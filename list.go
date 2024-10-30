@@ -10,7 +10,7 @@ type List struct {
 	Object
 }
 
-func newList(obj *C.PyObject) List {
+func newList(obj *PyObject) List {
 	return List{newObject(obj)}
 }
 

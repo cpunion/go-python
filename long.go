@@ -10,7 +10,7 @@ type Long struct {
 	Object
 }
 
-func newLong(obj *C.PyObject) Long {
+func newLong(obj *PyObject) Long {
 	return Long{newObject(obj)}
 }
 

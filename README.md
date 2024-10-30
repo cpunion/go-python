@@ -1,8 +1,12 @@
+# go-python: a CPython wrapper for Go
+
+Make Go and Python code inter-operable.
+
 ## Goal
 
 - Provide automatically DecRef for Python objects.
 - Wrap generic PyObject(s) to typed Python objects.
-- Provide a way to define Python objects in LLGo.
+- Provide a way to define Python objects in Go.
 
 ## Python types wrapper design
 
@@ -13,7 +17,7 @@ type pyObject struct {
   obj *C.PyObject
 }
 
-func newObject(obj *C.PyObject) *pyObject {
+func newObject(obj *PyObject) *pyObject {
   o := &pyObject{obj}
   runtime.SetFinalizer(o, func(o *pyObject) {
     o.obj.DecRef()

@@ -10,11 +10,11 @@ type Dict struct {
 	Object
 }
 
-func newDict(obj *C.PyObject) Dict {
+func newDict(obj *PyObject) Dict {
 	return Dict{newObject(obj)}
 }
 
-func NewDict(obj *C.PyObject) Dict {
+func NewDict(obj *PyObject) Dict {
 	return newDict(obj)
 }
 

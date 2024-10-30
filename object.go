@@ -18,7 +18,7 @@ type pyObject struct {
 	obj *C.PyObject
 }
 
-func (obj *pyObject) Obj() *C.PyObject {
+func (obj *pyObject) Obj() *PyObject {
 	if obj == nil {
 		return nil
 	}
@@ -50,7 +50,7 @@ func (obj Object) object() Object {
 	return obj
 }
 
-func newObject(obj *C.PyObject) Object {
+func newObject(obj *PyObject) Object {
 	if obj == nil {
 		C.PyErr_Print()
 		panic("nil Python object")
@@ -173,7 +173,7 @@ func (obj Object) String() string {
 	return newStr(C.PyObject_Str(obj.obj)).String()
 }
 
-func (obj Object) Obj() *C.PyObject {
+func (obj Object) Obj() *PyObject {
 	if obj.Nil() {
 		return nil
 	}

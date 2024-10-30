@@ -10,7 +10,6 @@ import "C"
 
 import (
 	"os"
-	"unsafe"
 
 	"github.com/cpunion/go-python"
 )
@@ -46,13 +45,6 @@ func UpdateExamples(country string) python.Object {
 			"samples": [][]string{{"Islamabad"}, {"Karachi"}, {"Lahore"}},
 		}))
 	}
-}
-
-//export UpdateExamples2
-func UpdateExamples2(self, args *C.PyObject) *C.PyObject {
-	argsTuple := python.FromPy((*python.PyObject)(unsafe.Pointer(args))).AsTuple()
-	country := argsTuple.Get(0).String()
-	return (*C.PyObject)(unsafe.Pointer(UpdateExamples(country).Obj()))
 }
 
 func main() {

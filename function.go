@@ -24,7 +24,7 @@ type Func struct {
 	Object
 }
 
-func newFunc(obj *C.PyObject) Func {
+func newFunc(obj *PyObject) Func {
 	return Func{newObject(obj)}
 }
 
@@ -69,30 +69,23 @@ func (f Func) Call(args ...any) Object {
 
 type wrapperContext struct {
 	v any
+	t reflect.Type
 }
 
 //export wrapperFunc
-func wrapperFunc(self, args *C.PyObject) *C.PyObject {
+func wrapperFunc(self, args *PyObject) *PyObject {
 	wCtx := (*wrapperContext)(C.PyCapsule_GetPointer(self, AllocCStr("wrapperContext")))
-	fmt.Printf("wrapperContext: %p\n", wCtx)
-	// 恢复上下文
 	v := reflect.ValueOf(wCtx.v)
 	t := v.Type()
-	fmt.Printf("wrapperFunc type: %v\n", t)
-	// 构建参数
+
 	goArgs := make([]reflect.Value, t.NumIn())
-	argsTuple := FromPy(args).AsTuple()
-	fmt.Printf("args: %v\n", argsTuple)
 	for i := range goArgs {
 		goArgs[i] = reflect.New(t.In(i)).Elem()
 		ToValue(FromPy(C.PyTuple_GetItem(args, C.Py_ssize_t(i))), goArgs[i])
-		fmt.Printf("goArgs[%d]: %T\n", i, goArgs[i].Interface())
 	}
 
-	// 调用原始函数
 	results := v.Call(goArgs)
 
-	// 处理返回值
 	if len(results) == 0 {
 		return None().Obj()
 	}
@@ -117,8 +110,6 @@ func FuncOf1(name string, fn unsafe.Pointer, doc string) Func {
 	return newFunc(pyFn)
 }
 
-var ctxs = make(map[unsafe.Pointer]*wrapperContext)
-
 func FuncOf(name string, fn any, doc string) Func {
 	m := MainModule()
 	v := reflect.ValueOf(fn)
@@ -127,13 +118,8 @@ func FuncOf(name string, fn any, doc string) Func {
 		fmt.Printf("type: %T, kind: %d\n", fn, t.Kind())
 		panic("AddFunction: fn must be a function")
 	}
-	println("FuncOf name:", name)
-	fmt.Printf("FuncOf type: %v\n", t)
-	ctx := new(wrapperContext)
-	ctx.v = fn
+	ctx := &wrapperContext{v: fn, t: t}
 	obj := C.PyCapsule_New(unsafe.Pointer(ctx), AllocCStr("wrapperContext"), nil)
-	fmt.Printf("FuncOf ctx: %p\n", ctx)
-	ctxs[unsafe.Pointer(ctx)] = ctx
 	def := &C.PyMethodDef{
 		ml_name:  AllocCStr(name),
 		ml_meth:  C.PyCFunction(C.wrapperFunc),
@@ -145,31 +131,4 @@ func FuncOf(name string, fn any, doc string) Func {
 		panic(fmt.Sprintf("Failed to add function %s to module", name))
 	}
 	return newFunc(pyFn)
-}
-
-func buildFormatString(t reflect.Type) *C.char {
-	format := ""
-	for i := 0; i < t.NumIn(); i++ {
-		switch t.In(i).Kind() {
-		case reflect.Int, reflect.Int64:
-			format += "i"
-		case reflect.Float64:
-			format += "d"
-		case reflect.String:
-			format += "s"
-		// Add more types as needed
-		default:
-			panic(fmt.Sprintf("Unsupported argument type: %v", t.In(i)))
-		}
-	}
-	return AllocCStr(format)
-}
-
-func buildArgPointers(args []reflect.Value) []interface{} {
-	pointers := make([]interface{}, len(args))
-	for i := range args {
-		args[i] = reflect.New(args[i].Type()).Elem()
-		pointers[i] = args[i].Addr().Interface()
-	}
-	return pointers
 }

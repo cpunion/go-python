@@ -10,7 +10,7 @@ type Complex struct {
 	Object
 }
 
-func newComplex(obj *C.PyObject) Complex {
+func newComplex(obj *PyObject) Complex {
 	return Complex{newObject(obj)}
 }
 

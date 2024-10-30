@@ -10,7 +10,7 @@ type Float struct {
 	Object
 }
 
-func newFloat(obj *C.PyObject) Float {
+func newFloat(obj *PyObject) Float {
 	return Float{newObject(obj)}
 }
 

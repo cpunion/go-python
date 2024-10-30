@@ -14,7 +14,7 @@ type Module struct {
 	Object
 }
 
-func newModule(obj *C.PyObject) Module {
+func newModule(obj *PyObject) Module {
 	return Module{newObject(obj)}
 }
 

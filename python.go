@@ -8,6 +8,7 @@ import "C"
 import "unsafe"
 
 type PyObject = C.PyObject
+type PyCFunction = C.PyCFunction
 
 func Initialize() {
 	C.Py_Initialize()

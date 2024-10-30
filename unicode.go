@@ -14,7 +14,7 @@ type Str struct {
 	Object
 }
 
-func newStr(obj *C.PyObject) Str {
+func newStr(obj *PyObject) Str {
 	return Str{newObject(obj)}
 }
 

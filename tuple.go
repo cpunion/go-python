@@ -10,7 +10,7 @@ type Tuple struct {
 	Object
 }
 
-func newTuple(obj *C.PyObject) Tuple {
+func newTuple(obj *PyObject) Tuple {
 	return Tuple{newObject(obj)}
 }
 

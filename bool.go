@@ -10,7 +10,7 @@ type Bool struct {
 	Object
 }
 
-func newBool(obj *C.PyObject) Bool {
+func newBool(obj *PyObject) Bool {
 	return Bool{newObject(obj)}
 }
 
