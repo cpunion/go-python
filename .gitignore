@@ -1,0 +1,4 @@
+.tool-versions
+*.out
+*.pyc
+__pycache__
