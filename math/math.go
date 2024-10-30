@@ -14,5 +14,5 @@ func math() gp.Module {
 }
 
 func Sqrt(x gp.Float) gp.Float {
-	return math().CallMethod("sqrt", x.Obj()).AsFloat()
+	return math().Call("sqrt", x.Obj()).AsFloat()
 }

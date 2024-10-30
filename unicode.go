@@ -37,5 +37,5 @@ func (s Str) Len() int {
 }
 
 func (s Str) Encode(encoding string) Bytes {
-	return Cast[Bytes](s.CallMethod("encode", MakeStr(encoding)))
+	return Cast[Bytes](s.Call("encode", MakeStr(encoding)))
 }

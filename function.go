@@ -49,6 +49,10 @@ func (f Func) CallObject(args Tuple) Object {
 	return newObject(C.PyObject_CallObject(f.obj, args.obj))
 }
 
+func (f Func) CallObjectKw(args Tuple, kw KwArgs) Object {
+	return f.call(args, From(map[string]any(kw)).AsDict())
+}
+
 func (f Func) Call(args ...any) Object {
 	switch len(args) {
 	case 0:

@@ -148,20 +148,14 @@ func (obj Object) AsModule() Module {
 	return Cast[Module](obj)
 }
 
-func (obj Object) CallKeywords(name string, args ...any) func(kw any) Object {
-	return func(kw any) Object {
-		fn := Cast[Func](obj.GetAttr(name))
-		pyArgs := MakeTuple(args...)
-		pyKw := Cast[Dict](From(kw))
-		r := fn.call(pyArgs, pyKw)
-		return r
-	}
-}
-
 func (obj Object) Call(name string, args ...any) Object {
 	fn := Cast[Func](obj.GetAttr(name))
-	callArgs := MakeTuple(args...)
-	return fn.CallObject(callArgs)
+	argsTuple, kwArgs := splitArgs(args...)
+	if kwArgs == nil {
+		return fn.CallObject(argsTuple)
+	} else {
+		return fn.CallObjectKw(argsTuple, kwArgs)
+	}
 }
 
 func (obj Object) Repr() string {
@@ -226,6 +220,8 @@ func From(v any) Object {
 		switch vv.Kind() {
 		case reflect.Slice:
 			return fromSlice(vv).Object
+		case reflect.Map:
+			return fromMap(vv).Object
 		}
 		panic(fmt.Errorf("unsupported type for Python: %T\n", v))
 	}
@@ -351,8 +347,10 @@ func fromSlice(v reflect.Value) List {
 	return list
 }
 
-func (obj Object) CallMethod(name string, args ...any) Object {
-	mthd := Cast[Func](obj.GetAttr(name))
-	argsTuple := MakeTuple(args...)
-	return mthd.CallObject(argsTuple)
+func fromMap(v reflect.Value) Dict {
+	dict := newDict(C.PyDict_New())
+	for _, key := range v.MapKeys() {
+		dict.Set(From(key.Interface()), From(v.MapIndex(key).Interface()))
+	}
+	return dict
 }

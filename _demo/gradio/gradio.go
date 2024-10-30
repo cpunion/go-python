@@ -29,13 +29,13 @@ var gr gp.Module
 func UpdateExamples(country string) gp.Object {
 	println("country:", country)
 	if country == "USA" {
-		return gr.CallKeywords("Dataset")(gp.MakeDict(map[any]any{
+		return gr.Call("Dataset", gp.KwArgs{
 			"samples": [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}},
-		}))
+		})
 	} else {
-		return gr.CallKeywords("Dataset")(gp.MakeDict(map[any]any{
+		return gr.Call("Dataset", gp.KwArgs{
 			"samples": [][]string{{"Islamabad"}, {"Karachi"}, {"Lahore"}},
-		}))
+		})
 	}
 }
 
@@ -52,15 +52,15 @@ func main() {
 	// fn := gp.FuncOf(UpdateExamples)
 	blocks := gr.Call("Blocks")
 	demo := gp.With(blocks, func(v gp.Object) {
-		dropdown := gr.CallKeywords("Dropdown")(gp.MakeDict(map[any]any{
+		dropdown := gr.Call("Dropdown", gp.KwArgs{
 			"label":   "Country",
 			"choices": []string{"USA", "Pakistan"},
 			"value":   "USA",
-		}))
+		})
 		textbox := gr.Call("Textbox")
 		examples := gr.Call("Examples", [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}}, textbox)
 		dataset := examples.GetAttr("dataset")
-		dropdown.CallMethod("change", fn, dropdown, dataset)
+		dropdown.Call("change", fn, dropdown, dataset)
 	})
-	demo.CallMethod("launch")
+	demo.Call("launch")
 }
