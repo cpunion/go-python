@@ -11,6 +11,8 @@ import "C"
 import (
 	"fmt"
 	"reflect"
+	"runtime"
+	"strings"
 	"unsafe"
 )
 
@@ -110,7 +112,7 @@ func FuncOf1(name string, fn unsafe.Pointer, doc string) Func {
 	return newFunc(pyFn)
 }
 
-func FuncOf(name string, fn any, doc string) Func {
+func FuncOf(fn any, doc string) Func {
 	m := MainModule()
 	v := reflect.ValueOf(fn)
 	t := v.Type()
@@ -118,6 +120,18 @@ func FuncOf(name string, fn any, doc string) Func {
 		fmt.Printf("type: %T, kind: %d\n", fn, t.Kind())
 		panic("AddFunction: fn must be a function")
 	}
+
+	name := runtime.FuncForPC(v.Pointer()).Name()
+	if name == "" {
+		name = fmt.Sprintf("anonymous_func_%p", fn)
+	} else {
+		if idx := strings.LastIndex(name, "."); idx >= 0 {
+			name = name[idx+1:]
+		}
+	}
+
+	doc = strings.ReplaceAll(doc, "update_examples", name)
+
 	ctx := &wrapperContext{v: fn, t: t}
 	obj := C.PyCapsule_New(unsafe.Pointer(ctx), AllocCStr("wrapperContext"), nil)
 	def := &C.PyMethodDef{

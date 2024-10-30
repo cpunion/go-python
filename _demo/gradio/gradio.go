@@ -55,7 +55,7 @@ func main() {
 
 	python.Initialize()
 	gr = python.ImportModule("gradio")
-	fn := python.FuncOf("update_examples", UpdateExamples,
+	fn := python.FuncOf(UpdateExamples,
 		"update_examples(country, /)\n--\n\nUpdate examples based on country")
 	// fn := python.FuncOf1("update_examples", unsafe.Pointer(C.UpdateExamples2),
 	// 	"update_examples(country, /)\n--\n\nUpdate examples based on country")
