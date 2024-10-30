@@ -8,85 +8,57 @@ Make Go and Python code inter-operable.
 - Wrap generic PyObject(s) to typed Python objects.
 - Provide a way to define Python objects in Go.
 
-## Python types wrapper design
+## Usage
 
-To automatically DecRef Python objects, we need to wrap them in a Go struct that will call DecRef when it is garbage collected. This is done by embedding a PyObject in a Go struct and registering a finalizer on the Go struct. Below is an example of how this is done:
+See the [examples](_demo).
 
-```go
-type pyObject struct {
-  obj *C.PyObject
-}
-
-func newObject(obj *PyObject) *pyObject {
-  o := &pyObject{obj}
-  runtime.SetFinalizer(o, func(o *pyObject) {
-    o.obj.DecRef()
-  })
-  return o
-}
-```
-
-To wrap generic PyObject(s) to typed Python objects, the best way is using alias types. Below is an example of how this is done:
+### Hello World
 
 ```go
-type Object *pyObject
+package main
 
-func (o Object) GetAttrString(name string) Object {
-  return newObject(o.obj.GetAttrString(name))
-}
+import gp "github.com/cpunion/go-python"
 
-type Dict Object
-
-func (d Dict) SetItemString(name string, value Object) {
-  d.obj.SetItemString(name, value.obj)
+func main() {
+	gp.Initialize()
+	plt := gp.ImportModule("matplotlib.pyplot")
+	plt.Call("plot", gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
+	plt.Call("show")
 }
 ```
 
-Unfortunately, Go does not allow defining methods on alias types like the above.
-
-```shell
-invalid receiver type PyObject (pointer or interface type)
-invalid receiver type PyDict (pointer or interface type)
-```
-
-We can define a new type that embeds the alias type and define methods on the new type. Below is an example of how this is done:
+### Typed Python Objects
 
 ```go
-type Object struct {
-  *pyObject
+package main
+
+import gp "github.com/cpunion/go-python"
+
+type plt struct {
+	gp.Module
 }
 
-func (o *Object) GetAttrString(name string) *Object {
-  return &Object{newObject(o.obj.GetAttrString(name))}
+func Plt() plt {
+	return plt{gp.ImportModule("matplotlib.pyplot")}
 }
 
-type Dict struct {
-  *Object
+func (m plt) Plot(args ...any) gp.Object {
+	return m.Call("plot", args...)
 }
 
-func (d *Dict) SetItemString(name string, value *Object) {
-  d.obj.SetItemString(name, value.obj)
-}
-```
-
-But allocating a `PyDict` object will allocate a `PyObject` object and a `pyObject` object. This is not efficient.
-
-We can use a `struct` instead of a `pointer` to avoid this. Below is an example of how this is done:
-
-```go
-type Object struct {
-  *pyObject
+func (m plt) Show() {
+	m.Call("show")
 }
 
-func (o Object) GetAttrString(name string) Object {
-  return Object{newObject(o.obj.GetAttrString(name))}
-}
-
-type Dict struct {
-  Object
-}
-
-func (d Dict) SetItemString(name string, value Object) {
-  d.obj.SetItemString(name, value.obj)
+func main() {
+	gp.Initialize()
+	defer gp.Finalize()
+	plt := Plt()
+	plt.Plot(gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
+	plt.Show()
 }
 ```
+
+### Define Python Objects
+
+To be written.

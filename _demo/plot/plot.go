@@ -1,39 +1,27 @@
 package main
 
-import (
-	"github.com/cpunion/go-python"
-)
+import gp "github.com/cpunion/go-python"
 
 type plt struct {
-	python.Module
+	gp.Module
 }
 
 func Plt() plt {
-	return plt{python.ImportModule("matplotlib.pyplot")}
+	return plt{gp.ImportModule("matplotlib.pyplot")}
 }
 
-func (m plt) Plot(args ...any) func(kw any) python.Object {
-	return m.CallKeywords("plot", args...)
+func (m plt) Plot(args ...any) gp.Object {
+	return m.Call("plot", args...)
 }
 
 func (m plt) Show() {
 	m.Call("show")
 }
 
-func plot1() {
-	plt := python.ImportModule("matplotlib.pyplot")
-	plt.CallKeywords("plot", python.MakeTuple(5, 10), python.MakeTuple(10, 15))(python.DictFromPairs("color", "red"))
-	plt.Call("show")
-}
-
-func plot2() {
-	plt := Plt()
-	plt.Plot(python.MakeTuple(5, 10), python.MakeTuple(10, 15))(python.DictFromPairs("color", "red"))
-	plt.Show()
-}
-
 func main() {
-	python.Initialize()
-	plot1()
-	plot2()
+	gp.Initialize()
+	defer gp.Finalize()
+	plt := Plt()
+	plt.Plot(gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
+	plt.Show()
 }
