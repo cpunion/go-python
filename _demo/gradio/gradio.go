@@ -1,17 +1,9 @@
 package main
 
-/*
-#cgo pkg-config: python-3.12-embed
-#include <Python.h>
-
-extern PyObject* UpdateExamples2(PyObject* self, PyObject* args);
-*/
-import "C"
-
 import (
 	"os"
 
-	"github.com/cpunion/go-python"
+	gp "github.com/cpunion/go-python"
 )
 
 /*
@@ -32,16 +24,16 @@ with gr.Blocks() as demo:
 demo.launch()
 */
 
-var gr python.Module
+var gr gp.Module
 
-func UpdateExamples(country string) python.Object {
+func UpdateExamples(country string) gp.Object {
 	println("country:", country)
 	if country == "USA" {
-		return gr.CallKeywords("Dataset")(python.MakeDict(map[any]any{
+		return gr.CallKeywords("Dataset")(gp.MakeDict(map[any]any{
 			"samples": [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}},
 		}))
 	} else {
-		return gr.CallKeywords("Dataset")(python.MakeDict(map[any]any{
+		return gr.CallKeywords("Dataset")(gp.MakeDict(map[any]any{
 			"samples": [][]string{{"Islamabad"}, {"Karachi"}, {"Lahore"}},
 		}))
 	}
@@ -53,16 +45,14 @@ func main() {
 		return
 	}
 
-	python.Initialize()
-	gr = python.ImportModule("gradio")
-	fn := python.FuncOf(UpdateExamples,
+	gp.Initialize()
+	gr = gp.ImportModule("gradio")
+	fn := gp.FuncOf(UpdateExamples,
 		"update_examples(country, /)\n--\n\nUpdate examples based on country")
-	// fn := python.FuncOf1("update_examples", unsafe.Pointer(C.UpdateExamples2),
-	// 	"update_examples(country, /)\n--\n\nUpdate examples based on country")
-	// fn := python.FuncOf(UpdateExamples)
+	// fn := gp.FuncOf(UpdateExamples)
 	blocks := gr.Call("Blocks")
-	demo := python.With(blocks, func(v python.Object) {
-		dropdown := gr.CallKeywords("Dropdown")(python.MakeDict(map[any]any{
+	demo := gp.With(blocks, func(v gp.Object) {
+		dropdown := gr.CallKeywords("Dropdown")(gp.MakeDict(map[any]any{
 			"label":   "Country",
 			"choices": []string{"USA", "Pakistan"},
 			"value":   "USA",
