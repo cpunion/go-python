@@ -1,18 +1,18 @@
 package math
 
 import (
-	"github.com/cpunion/go-python"
+	gp "github.com/cpunion/go-python"
 )
 
-var math_ python.Module
+var math_ gp.Module
 
-func math() python.Module {
+func math() gp.Module {
 	if math_.Nil() {
-		math_ = python.ImportModule("math")
+		math_ = gp.ImportModule("math")
 	}
 	return math_
 }
 
-func Sqrt(x python.Float) python.Float {
-	return math().CallMethod("sqrt", x.Obj()).AsFloat()
+func Sqrt(x gp.Float) gp.Float {
+	return math().Call("sqrt", x.Obj()).AsFloat()
 }

@@ -1,7 +1,7 @@
-package python
+package gp
 
 /*
-#cgo pkg-config: python-3.12-embed
+#cgo pkg-config: python3-embed
 #include <Python.h>
 */
 import "C"
@@ -19,10 +19,6 @@ func Finalize() {
 }
 
 // ----------------------------------------------------------------------------
-
-func SetProgramName(name string) {
-	C.Py_SetProgramName(AllocWCStr(name))
-}
 
 type InputType = C.int
 

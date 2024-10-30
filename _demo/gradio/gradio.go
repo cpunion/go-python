@@ -1,23 +1,16 @@
 package main
 
-/*
-#cgo pkg-config: python-3.12-embed
-#include <Python.h>
-
-extern PyObject* UpdateExamples2(PyObject* self, PyObject* args);
-*/
-import "C"
-
 import (
 	"os"
 
-	"github.com/cpunion/go-python"
+	gp "github.com/cpunion/go-python"
 )
 
 /*
 import gradio as gr
 
 def update_examples(country):
+		print("country:", country)
     if country == "USA":
         return gr.Dataset(samples=[["Chicago"], ["Little Rock"], ["San Francisco"]])
     else:
@@ -32,18 +25,18 @@ with gr.Blocks() as demo:
 demo.launch()
 */
 
-var gr python.Module
+var gr gp.Module
 
-func UpdateExamples(country string) python.Object {
+func UpdateExamples(country string) gp.Object {
 	println("country:", country)
 	if country == "USA" {
-		return gr.CallKeywords("Dataset")(python.MakeDict(map[any]any{
+		return gr.Call("Dataset", gp.KwArgs{
 			"samples": [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}},
-		}))
+		})
 	} else {
-		return gr.CallKeywords("Dataset")(python.MakeDict(map[any]any{
+		return gr.Call("Dataset", gp.KwArgs{
 			"samples": [][]string{{"Islamabad"}, {"Karachi"}, {"Lahore"}},
-		}))
+		})
 	}
 }
 
@@ -53,24 +46,21 @@ func main() {
 		return
 	}
 
-	python.Initialize()
-	gr = python.ImportModule("gradio")
-	fn := python.FuncOf(UpdateExamples,
+	gp.Initialize()
+	gr = gp.ImportModule("gradio")
+	fn := gp.FuncOf(UpdateExamples,
 		"update_examples(country, /)\n--\n\nUpdate examples based on country")
-	// fn := python.FuncOf1("update_examples", unsafe.Pointer(C.UpdateExamples2),
-	// 	"update_examples(country, /)\n--\n\nUpdate examples based on country")
-	// fn := python.FuncOf(UpdateExamples)
-	blocks := gr.Call("Blocks")
-	demo := python.With(blocks, func(v python.Object) {
-		dropdown := gr.CallKeywords("Dropdown")(python.MakeDict(map[any]any{
+	// fn := gp.FuncOf(UpdateExamples)
+	demo := gp.With(gr.Call("Blocks"), func(v gp.Object) {
+		dropdown := gr.Call("Dropdown", gp.KwArgs{
 			"label":   "Country",
 			"choices": []string{"USA", "Pakistan"},
 			"value":   "USA",
-		}))
+		})
 		textbox := gr.Call("Textbox")
 		examples := gr.Call("Examples", [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}}, textbox)
 		dataset := examples.GetAttr("dataset")
-		dropdown.CallMethod("change", fn, dropdown, dataset)
+		dropdown.Call("change", fn, dropdown, dataset)
 	})
-	demo.CallMethod("launch")
+	demo.Call("launch")
 }

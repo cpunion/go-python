@@ -1,7 +1,6 @@
-package python
+package gp
 
 /*
-#cgo pkg-config: python-3.12-embed
 #include <Python.h>
 #include <moduleobject.h>
 
@@ -87,7 +86,7 @@ const (
 )
 
 // AddMethod adds a method to the module
-func (mb *ModuleBuilder) AddMethod(name string, fn C.PyCFunction, doc string) *ModuleBuilder {
+func (mb *ModuleBuilder) AddMethod(name string, fn PyCFunction, doc string) *ModuleBuilder {
 	mb.methods = append(mb.methods, C.PyMethodDef{
 		ml_name:  AllocCStr(name),
 		ml_meth:  fn,

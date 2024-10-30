@@ -1,7 +1,6 @@
-package python
+package gp
 
 /*
-#cgo pkg-config: python-3.12-embed
 #include <Python.h>
 */
 import "C"
@@ -38,5 +37,5 @@ func (s Str) Len() int {
 }
 
 func (s Str) Encode(encoding string) Bytes {
-	return Cast[Bytes](s.CallMethod("encode", MakeStr(encoding)))
+	return Cast[Bytes](s.Call("encode", MakeStr(encoding)))
 }

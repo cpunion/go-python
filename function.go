@@ -1,7 +1,6 @@
-package python
+package gp
 
 /*
-#cgo pkg-config: python-3.12-embed
 #include <Python.h>
 
 extern PyObject* wrapperFunc(PyObject* self, PyObject* args);
@@ -48,6 +47,10 @@ func (f Func) callOneArg(arg Objecter) Object {
 
 func (f Func) CallObject(args Tuple) Object {
 	return newObject(C.PyObject_CallObject(f.obj, args.obj))
+}
+
+func (f Func) CallObjectKw(args Tuple, kw KwArgs) Object {
+	return f.call(args, From(map[string]any(kw)).AsDict())
 }
 
 func (f Func) Call(args ...any) Object {
