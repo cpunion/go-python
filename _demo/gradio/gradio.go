@@ -10,6 +10,7 @@ import (
 import gradio as gr
 
 def update_examples(country):
+		print("country:", country)
     if country == "USA":
         return gr.Dataset(samples=[["Chicago"], ["Little Rock"], ["San Francisco"]])
     else:
@@ -50,8 +51,7 @@ func main() {
 	fn := gp.FuncOf(UpdateExamples,
 		"update_examples(country, /)\n--\n\nUpdate examples based on country")
 	// fn := gp.FuncOf(UpdateExamples)
-	blocks := gr.Call("Blocks")
-	demo := gp.With(blocks, func(v gp.Object) {
+	demo := gp.With(gr.Call("Blocks"), func(v gp.Object) {
 		dropdown := gr.Call("Dropdown", gp.KwArgs{
 			"label":   "Country",
 			"choices": []string{"USA", "Pakistan"},
