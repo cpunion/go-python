@@ -8,6 +8,11 @@ import (
 	"unsafe"
 )
 
+type Char = C.char
+type WChar = C.wchar_t
+type Int = C.int
+type Pointer = unsafe.Pointer
+
 //go:inline
 func AllocCStr(s string) *C.char {
 	return C.CString(s)

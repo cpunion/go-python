@@ -48,8 +48,8 @@ func main() {
 
 	gp.Initialize()
 	gr = gp.ImportModule("gradio")
-	fn := gp.FuncOf(UpdateExamples,
-		"update_examples(country, /)\n--\n\nUpdate examples based on country")
+	fn := gp.CreateFunc(UpdateExamples,
+		"(country, /)\n--\n\nUpdate examples based on country")
 	// Would be (in the future):
 	// fn := gp.FuncOf(UpdateExamples)
 	demo := gp.With(gr.Call("Blocks"), func(v gp.Object) {

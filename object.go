@@ -62,6 +62,10 @@ func newObject(obj *PyObject) Object {
 	return p
 }
 
+func (obj Object) Dir() List {
+	return obj.Call("__dir__").AsList()
+}
+
 func (obj Object) GetAttr(name string) Object {
 	o := C.PyObject_GetAttrString(obj.obj, AllocCStr(name))
 	C.Py_IncRef(o)
