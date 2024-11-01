@@ -42,14 +42,9 @@ func Add(a, b int) int {
 
 func InitFooModule() gp.Module {
 	m := gp.CreateModule("foo")
-	fmt.Printf("CreateModule: %v\n", m)
-
 	// Add the function to the module
-	f := m.AddMethod("add", Add, "(a, b) -> int\n--\n\nAdd two integers.")
-	fmt.Printf("AddMethod: %v\n", f)
-
+	m.AddMethod("add", Add, "(a, b) -> float\n--\n\nAdd two integers.")
 	// Add the type to the module
 	gp.AddType[Point](m, (*Point).init, "Point", "Point objects")
-
 	return m
 }

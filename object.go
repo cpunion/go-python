@@ -315,7 +315,7 @@ func ToValue(obj Object, v reflect.Value) bool {
 	case reflect.Float32:
 		fallthrough
 	case reflect.Float64:
-		if obj.IsFloat() {
+		if obj.IsFloat() || obj.IsLong() {
 			v.SetFloat(Cast[Float](obj).Float64())
 		} else {
 			return false
