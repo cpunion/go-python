@@ -29,5 +29,15 @@ jobs:
     - name: Build
       run: go build -v ./...
 
-    - name: Test
-      run: go test -v ./...
+    - name: Test with coverage
+      run: go test -p 1 -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-24.04'
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.txt
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true

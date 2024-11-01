@@ -1,5 +1,7 @@
 # go-python: Write Python in Go - The most intuitive Python wrapper for Golang
 
+[![codecov](https://codecov.io/github/cpunion/go-python/graph/badge.svg?token=DLVMvjAOFM)](https://codecov.io/github/cpunion/go-python)
+
 ## Goal
 
 - Automatically DecRef for Python objects.
