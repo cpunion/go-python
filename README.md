@@ -1,14 +1,37 @@
-# go-python: a CPython wrapper for Go
-
-Make Go and Python code inter-operable.
+# go-python: Write Python in Go - The most intuitive Python wrapper for Golang
 
 ## Goal
 
-- Provide automatically DecRef for Python objects.
-- Wrap generic PyObject(s) to typed Python objects.
-- Provide a way to define Python objects in Go.
+- Automatically DecRef for Python objects.
+- Typed Python objects.
+- Most intuitive and easy to use.
 
-## Usage
+## Roadmap
+
+- [x] Call Python in Go.
+  - [x] Basic types.
+    - [x] Integers.
+    - [x] Floats.
+    - [x] Strings.
+    - [x] Bytes.
+    - [x] Booleans.
+    - [x] Lists.
+    - [x] Tuples.
+    - [x] Dicts.
+  - [x] Modules.
+  - [ ] Functions
+    - [x] Keyword arguments.
+    - [x] Mapping arguments and return values.
+    - [ ] Default arguments.
+- [ ] Call Go in Python.
+  - [x] Export Go functions, struct types to Python.
+  - [ ] Auto export field types if it's a struct.
+  - [ ] Auto generate function signatures (used by gradio).
+- [x] Basic tests on common used libraries.
+  - [x] matplotlib
+  - [x] gradio
+
+## Examples
 
 See the [examples](_demo).
 
