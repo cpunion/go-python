@@ -13,25 +13,25 @@ import (
 )
 
 type Point struct {
-	X int
-	Y int
+	X float64
+	Y float64
 }
 
-func (p *Point) init(x, y int) {
+func (p *Point) init(x, y float64) {
 	p.X = x
 	p.Y = y
 }
 
 func (p *Point) Print() {
-	fmt.Printf("Point(%d, %d)\n", p.X, p.Y)
+	fmt.Printf("Point(%f, %f)\n", p.X, p.Y)
 }
 
-func (p *Point) Distance() int {
+func (p *Point) Distance() float64 {
 	return p.X * p.Y
 }
 
 // Move method for Point
-func (p *Point) Move(dx, dy int) {
+func (p *Point) Move(dx, dy float64) {
 	p.X += dx
 	p.Y += dy
 }

@@ -52,7 +52,7 @@ func (obj Object) object() Object {
 func newObject(obj *PyObject) Object {
 	if obj == nil {
 		C.PyErr_Print()
-		panic("nil Python object")
+		return None()
 	}
 	o := &pyObject{obj: obj}
 	p := Object{o}
@@ -231,10 +231,10 @@ func From(v any) Object {
 	}
 }
 
-func ToValue(obj Object, v reflect.Value) {
+func ToValue(obj Object, v reflect.Value) bool {
 	// Handle nil pointer
 	if !v.IsValid() || !v.CanSet() {
-		return
+		return false
 	}
 
 	switch v.Kind() {
@@ -284,6 +284,7 @@ func ToValue(obj Object, v reflect.Value) {
 	default:
 		panic(fmt.Errorf("unsupported type conversion from Python object to %v", v.Type()))
 	}
+	return true
 }
 
 func To[T any](obj Object) (ret T) {

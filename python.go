@@ -15,6 +15,7 @@ func Initialize() {
 }
 
 func Finalize() {
+	mainMod = Module{}
 	C.Py_FinalizeEx()
 }
 

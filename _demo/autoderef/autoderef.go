@@ -13,15 +13,20 @@ func main() {
 	gp.Initialize()
 	fooMod := foo.InitFooModule()
 	sum := fooMod.Call("add", gp.MakeLong(1), gp.MakeLong(2)).AsLong()
-	fmt.Printf("Sum: %d\n", sum.Int64())
+	fmt.Printf("Sum of 1 + 2: %d\n", sum.Int64())
 
 	dict := fooMod.Dict()
 	pointClass := dict.Get(gp.MakeStr("Point")).AsFunc()
 	point := pointClass.Call(gp.MakeLong(3), gp.MakeLong(4))
 	fmt.Printf("Point: %v\n", point.Dir())
 	fmt.Printf("x: %v, y: %v\n", point.GetAttr("x"), point.GetAttr("y"))
-	distance := point.Call("distance").AsLong()
-	fmt.Printf("Distance of 3 * 4: %d\n", distance.Int64())
+	distance := point.Call("distance").AsFloat()
+	fmt.Printf("Distance of 3 * 4: %f\n", distance.Float64())
+	point.Call("move", gp.MakeFloat(1), gp.MakeFloat(2))
+	fmt.Printf("x: %v, y: %v\n", point.GetAttr("x"), point.GetAttr("y"))
+	distance = point.Call("distance").AsFloat()
+	fmt.Printf("Distance of 4 * 6: %f\n", distance.Float64())
+	point.Call("print")
 
 	pythonCode := `
 def allocate_memory():
