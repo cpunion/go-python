@@ -1,14 +1,12 @@
-# go-python: a CPython wrapper for Go
-
-Make Go and Python code inter-operable.
+# go-python: Write Python in Go - The most intuitive Python wrapper for Golang
 
 ## Goal
 
-- Provide automatically DecRef for Python objects.
-- Wrap generic PyObject(s) to typed Python objects.
-- Provide a way to define Python objects in Go.
+- Automatically DecRef for Python objects.
+- Typed Python objects.
+- Most intuitive and easy to use.
 
-## Usage
+## Examples
 
 See the [examples](_demo).
 
