@@ -20,21 +20,12 @@ func MakeBool(b bool) Bool {
 	return False()
 }
 
-var trueObj Object
-var falseObj Object
-
 func True() Bool {
-	if trueObj.Nil() {
-		trueObj = MainModule().Dict().GetString("True")
-	}
-	return trueObj.AsBool()
+	return newBool(C.Py_True).AsBool()
 }
 
 func False() Bool {
-	if falseObj.Nil() {
-		falseObj = MainModule().Dict().GetString("False")
-	}
-	return falseObj.AsBool()
+	return newBool(C.Py_False).AsBool()
 }
 
 func (b Bool) Bool() bool {

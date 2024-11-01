@@ -5,10 +5,6 @@ package gp
 */
 import "C"
 
-import (
-	"unsafe"
-)
-
 type Module struct {
 	Object
 }
@@ -22,6 +18,10 @@ func ImportModule(name string) Module {
 	return newModule(mod)
 }
 
+func GetModule(name string) Module {
+	return newModule(C.PyImport_GetModule(MakeStr(name).obj))
+}
+
 func (m Module) Dict() Dict {
 	return newDict(C.PyModule_GetDict(m.obj))
 }
@@ -30,13 +30,10 @@ func (m Module) AddObject(name string, obj Object) int {
 	return int(C.PyModule_AddObject(m.obj, AllocCStr(name), obj.obj))
 }
 
-func (m Module) AddFunction(name string, fn unsafe.Pointer, doc string) Func {
-	def := &C.PyMethodDef{
-		ml_name:  AllocCStr(name),
-		ml_meth:  C.PyCFunction(fn),
-		ml_flags: C.METH_VARARGS,
-		ml_doc:   AllocCStr(doc),
-	}
-	pyFn := C.PyCMethod_New(def, nil, m.obj, nil)
-	return newFunc(pyFn)
+func CreateModule(name string) Module {
+	return newModule(C.PyModule_New(AllocCStr(name)))
+}
+
+func GetModuleDict() Dict {
+	return newDict(C.PyImport_GetModuleDict())
 }

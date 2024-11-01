@@ -5,7 +5,11 @@ package gp
 #include <Python.h>
 */
 import "C"
-import "unsafe"
+import (
+	"fmt"
+	"reflect"
+	"unsafe"
+)
 
 type PyObject = C.PyObject
 type PyCFunction = C.PyCFunction
@@ -16,6 +20,8 @@ func Initialize() {
 
 func Finalize() {
 	C.Py_FinalizeEx()
+	typeMetaMap = make(map[*C.PyObject]*typeMeta)
+	pyTypeMap = make(map[reflect.Type]*C.PyObject)
 }
 
 // ----------------------------------------------------------------------------
@@ -55,39 +61,36 @@ func With[T Objecter](obj T, fn func(v T)) T {
 
 // ----------------------------------------------------------------------------
 
-var mainMod Module
-
 func MainModule() Module {
-	if mainMod.Nil() {
-		mainMod = ImportModule("__main__")
-	}
-	return mainMod
+	return GetModule("__main__")
 }
 
-var noneObj Object
-
-/*
-from Dojo:
-if self.none_value.is_null():
-
-	var list_obj = self.PyList_New(0)
-	var tuple_obj = self.PyTuple_New(0)
-	var callable_obj = self.PyObject_GetAttrString(list_obj, "reverse")
-	self.none_value = self.PyObject_CallObject(callable_obj, tuple_obj)
-	self.Py_DecRef(tuple_obj)
-	self.Py_DecRef(callable_obj)
-	self.Py_DecRef(list_obj)
-*/
 func None() Object {
-	if noneObj.Nil() {
-		listObj := MakeList()
-		tupleObj := MakeTuple()
-		callableObj := listObj.GetFuncAttr("reverse")
-		noneObj = callableObj.CallObject(tupleObj)
-	}
-	return noneObj
+	return newObject(C.Py_None)
 }
 
 func Nil() Object {
 	return Object{}
+}
+
+// RunString executes Python code string and returns error if any
+func RunString(code string) error {
+	// Get __main__ module dict for executing code
+	main := MainModule()
+	dict := main.Dict()
+
+	// Run the code string
+	codeObj := CompileString(code, "<string>", FileInput)
+	if codeObj.Nil() {
+		return fmt.Errorf("failed to compile code")
+	}
+
+	ret := EvalCode(codeObj, dict, dict)
+	if ret.Nil() {
+		if err := FetchError(); err != nil {
+			return err
+		}
+		return fmt.Errorf("failed to execute code")
+	}
+	return nil
 }
