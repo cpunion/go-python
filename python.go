@@ -6,6 +6,7 @@ package gp
 */
 import "C"
 import (
+	"fmt"
 	"reflect"
 	"unsafe"
 )
@@ -70,4 +71,26 @@ func None() Object {
 
 func Nil() Object {
 	return Object{}
+}
+
+// RunString executes Python code string and returns error if any
+func RunString(code string) error {
+	// Get __main__ module dict for executing code
+	main := MainModule()
+	dict := main.Dict()
+
+	// Run the code string
+	codeObj := CompileString(code, "<string>", FileInput)
+	if codeObj.Nil() {
+		return fmt.Errorf("failed to compile code")
+	}
+
+	ret := EvalCode(codeObj, dict, dict)
+	if ret.Nil() {
+		if err := FetchError(); err != nil {
+			return err
+		}
+		return fmt.Errorf("failed to execute code")
+	}
+	return nil
 }

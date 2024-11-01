@@ -11,23 +11,59 @@ import (
 
 func main() {
 	gp.Initialize()
+	defer gp.Finalize()
 	fooMod := foo.InitFooModule()
+	gp.GetModuleDict().Set(gp.MakeStr("foo").Object, fooMod.Object)
+
+	Main1(fooMod)
+	Main2()
+	Main3()
+}
+
+func Main1(fooMod gp.Module) {
+	fmt.Printf("=========== Main1 ==========\n")
 	sum := fooMod.Call("add", gp.MakeLong(1), gp.MakeLong(2)).AsLong()
 	fmt.Printf("Sum of 1 + 2: %d\n", sum.Int64())
 
 	dict := fooMod.Dict()
-	pointClass := dict.Get(gp.MakeStr("Point")).AsFunc()
-	point := pointClass.Call(gp.MakeLong(3), gp.MakeLong(4))
-	fmt.Printf("Point: %v\n", point.Dir())
+	Point := dict.Get(gp.MakeStr("Point")).AsFunc()
+
+	point := Point.Call(gp.MakeLong(3), gp.MakeLong(4))
+	fmt.Printf("dir(point): %v\n", point.Dir())
 	fmt.Printf("x: %v, y: %v\n", point.GetAttr("x"), point.GetAttr("y"))
+
 	distance := point.Call("distance").AsFloat()
 	fmt.Printf("Distance of 3 * 4: %f\n", distance.Float64())
+
 	point.Call("move", gp.MakeFloat(1), gp.MakeFloat(2))
 	fmt.Printf("x: %v, y: %v\n", point.GetAttr("x"), point.GetAttr("y"))
+
 	distance = point.Call("distance").AsFloat()
 	fmt.Printf("Distance of 4 * 6: %f\n", distance.Float64())
 	point.Call("print")
+}
 
+func Main2() {
+	fmt.Printf("=========== Main2 ==========\n")
+	gp.RunString(`
+import foo
+point = foo.Point(3, 4)
+print("dir(point):", dir(point))
+print("x:", point.x)
+print("y:", point.y)
+
+print("distance:", point.distance())
+
+point.move(1, 2)
+print("x:", point.x)
+print("y:", point.y)
+print("distance:", point.distance())
+
+point.print()
+	`)
+}
+
+func Main3() {
 	pythonCode := `
 def allocate_memory():
     return bytearray(10 * 1024 * 1024)

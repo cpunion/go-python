@@ -33,3 +33,7 @@ func (m Module) AddObject(name string, obj Object) int {
 func CreateModule(name string) Module {
 	return newModule(C.PyModule_New(AllocCStr(name)))
 }
+
+func GetModuleDict() Dict {
+	return newDict(C.PyImport_GetModuleDict())
+}
