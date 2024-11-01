@@ -18,6 +18,10 @@ func ImportModule(name string) Module {
 	return newModule(mod)
 }
 
+func GetModule(name string) Module {
+	return newModule(C.PyImport_GetModule(MakeStr(name).obj))
+}
+
 func (m Module) Dict() Dict {
 	return newDict(C.PyModule_GetDict(m.obj))
 }
