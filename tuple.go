@@ -53,7 +53,7 @@ func (t Tuple) ParseArgs(addrs ...any) bool {
 		obj := t.Get(i)
 
 		switch v := addr.(type) {
-		// 整数类型
+		// Integer types
 		case *int:
 			*v = int(obj.AsLong().Int64())
 		case *int8:
@@ -75,32 +75,32 @@ func (t Tuple) ParseArgs(addrs ...any) bool {
 		case *uint64:
 			*v = uint64(obj.AsLong().Int64())
 
-		// 浮点类型
+		// Floating point types
 		case *float32:
 			*v = float32(obj.AsFloat().Float64())
 		case *float64:
 			*v = obj.AsFloat().Float64()
 
-		// 复数类型
+		// Complex number types
 		case *complex64:
 			*v = complex64(obj.AsComplex().Complex128())
 		case *complex128:
 			*v = obj.AsComplex().Complex128()
 
-		// 字符串类型
+		// String types
 		case *string:
 			*v = obj.AsStr().String()
 		case *[]byte:
 			*v = []byte(obj.AsStr().String())
 
-		// 布尔类型
+		// Boolean type
 		case *bool:
 			*v = obj.AsBool().Bool()
 
 		case **PyObject:
 			*v = obj.Obj()
 
-		// Python 对象
+		// Python object
 		case *Object:
 			*v = obj
 

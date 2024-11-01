@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-// TestStruct 包含各种类型的字段用于测试
+// TestStruct contains various types of fields for testing
 type TestStruct struct {
-	// C兼容的基本类型
+	// C-compatible basic types
 	BoolField       bool
 	Int8Field       int8
 	Int16Field      int16
@@ -24,7 +24,7 @@ type TestStruct struct {
 	Complex64Field  complex64
 	Complex128Field complex128
 
-	// 非C兼容类型
+	// Non-C-compatible types
 	StringField string
 	SliceField  []int
 	MapField    map[string]int
@@ -41,18 +41,18 @@ func TestAddType(t *testing.T) {
 
 	m := MainModule()
 
-	// 测试添加类型
+	// test add type
 	typ := AddType[TestStruct](m, nil, "TestStruct", "Test struct documentation")
 	if typ.Nil() {
 		t.Fatal("Failed to create type")
 	}
 
-	// 通过Python代码测试类型
+	// test type by Python code
 	code := `
-# 创建实例
+# create instance
 obj = TestStruct()
 
-# 测试C兼容类型字段
+# test C-compatible types
 obj.bool_field = True
 obj.int8_field = 127
 obj.int16_field = 32767
@@ -69,11 +69,24 @@ obj.float64_field = 3.14159265359
 obj.complex64_field = 1.5 + 2.5j
 obj.complex128_field = 3.14 + 2.718j
 
-# 测试方法调用
+# test non-C-compatible types
+obj.string_field = "test string"
+assert obj.string_field == "test string"
+
+obj.slice_field = [1, 2, 3]
+assert obj.slice_field == [1, 2, 3]
+
+obj.map_field = {"key": 42}
+assert obj.map_field["key"] == 42
+
+obj.struct_field = {"x": 100}
+assert obj.struct_field["x"] == 100
+
+# test method call
 result = obj.test_method()
 assert result == 42
 
-# 验证字段值
+# verify C-compatible types
 assert obj.bool_field == True
 assert obj.int8_field == 127
 assert obj.int16_field == 32767
@@ -90,30 +103,11 @@ assert abs(obj.float64_field - 3.14159265359) < 0.0000001
 assert abs(obj.complex64_field - (1.5 + 2.5j)) < 0.0001
 assert abs(obj.complex128_field - (3.14 + 2.718j)) < 0.0000001
 
-# 测试非C兼容类型字段是否被正确跳过
-try:
-    obj.string_field = "test"
-    assert False, "Should not be able to access string_field"
-except AttributeError:
-    pass
-
-try:
-    obj.slice_field = [1, 2, 3]
-    assert False, "Should not be able to access slice_field"
-except AttributeError:
-    pass
-
-try:
-    obj.map_field = {"key": "value"}
-    assert False, "Should not be able to access map_field"
-except AttributeError:
-    pass
-
-try:
-    obj.struct_field = None
-    assert False, "Should not be able to access struct_field"
-except AttributeError:
-    pass
+# verify non-C-compatible types
+assert obj.string_field == "test string"
+assert obj.slice_field == [1, 2, 3]
+assert obj.map_field["key"] == 42
+assert obj.struct_field["x"] == 100
 `
 
 	err := RunString(code)
@@ -122,7 +116,6 @@ except AttributeError:
 	}
 }
 
-// 测试带构造函数的类型
 type InitTestStruct struct {
 	Value int
 }
@@ -137,27 +130,25 @@ func TestAddTypeWithInit(t *testing.T) {
 
 	m := MainModule()
 
-	// 测试添加带构造函数的类型
 	typ := AddType[InitTestStruct](m, (*InitTestStruct).Init, "InitTestStruct", "Test init struct")
 	if typ.Nil() {
 		t.Fatal("Failed to create type with init")
 	}
 
-	// 通过Python代码测试构造函数
+	// test init function
 	code := `
-# 测试构造函数
+# test init function
 obj = InitTestStruct(42)
-print(dir(obj))
 assert obj.value == 42
 
-# 测试无参数调用时的错误处理
+# test error handling without arguments
 try:
     obj2 = InitTestStruct()
     assert False, "Should fail without arguments"
-except TypeError:
-    print("========= ")
+except TypeError as e:
+    pass
 
-# 测试参数类型错误的处理
+# test error handling with wrong argument type
 try:
     obj3 = InitTestStruct("wrong type")
     assert False, "Should fail with wrong argument type"

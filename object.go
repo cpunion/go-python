@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"unsafe"
 )
 
 // pyObject is a wrapper type that holds a Python Object and automatically calls
@@ -52,7 +53,7 @@ func (obj Object) object() Object {
 func newObject(obj *PyObject) Object {
 	if obj == nil {
 		C.PyErr_Print()
-		return None()
+		return Object{}
 	}
 	o := &pyObject{obj: obj}
 	p := Object{o}
@@ -106,6 +107,46 @@ func (obj Object) GetTupleAttr(name string) Tuple {
 
 func (obj Object) GetFuncAttr(name string) Func {
 	return obj.GetAttr(name).AsFunc()
+}
+
+func (obj Object) SetAttr(name string, value Object) {
+	C.PyObject_SetAttrString(obj.obj, AllocCStr(name), value.obj)
+}
+
+func (obj Object) IsLong() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyLong_Type) != 0
+}
+
+func (obj Object) IsFloat() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyFloat_Type) != 0
+}
+
+func (obj Object) IsComplex() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyComplex_Type) != 0
+}
+
+func (obj Object) IsStr() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyUnicode_Type) != 0
+}
+
+func (obj Object) IsBytes() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyBytes_Type) != 0
+}
+
+func (obj Object) IsBool() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyBool_Type) != 0
+}
+
+func (obj Object) IsList() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyList_Type) != 0
+}
+
+func (obj Object) IsTuple() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyTuple_Type) != 0
+}
+
+func (obj Object) IsDict() bool {
+	return C.Py_IS_TYPE(obj.obj, &C.PyDict_Type) != 0
 }
 
 func (obj Object) AsFloat() Float {
@@ -164,6 +205,10 @@ func (obj Object) Call(name string, args ...any) Object {
 
 func (obj Object) Repr() string {
 	return newStr(C.PyObject_Repr(obj.obj)).String()
+}
+
+func (obj Object) Type() Object {
+	return obj.GetAttr("__class__")
 }
 
 func (obj Object) String() string {
@@ -226,6 +271,8 @@ func From(v any) Object {
 			return fromSlice(vv).Object
 		case reflect.Map:
 			return fromMap(vv).Object
+		case reflect.Struct:
+			return fromStruct(vv)
 		}
 		panic(fmt.Errorf("unsupported type for Python: %T\n", v))
 	}
@@ -236,50 +283,112 @@ func ToValue(obj Object, v reflect.Value) bool {
 	if !v.IsValid() || !v.CanSet() {
 		return false
 	}
-
 	switch v.Kind() {
 	case reflect.Int8:
-		v.SetInt(Cast[Long](obj).Int64())
+		fallthrough
 	case reflect.Int16:
-		v.SetInt(Cast[Long](obj).Int64())
+		fallthrough
 	case reflect.Int32:
-		v.SetInt(Cast[Long](obj).Int64())
+		fallthrough
 	case reflect.Int64:
-		v.SetInt(Cast[Long](obj).Int64())
+		fallthrough
 	case reflect.Int:
-		v.SetInt(Cast[Long](obj).Int64())
+		if obj.IsLong() {
+			v.SetInt(Cast[Long](obj).Int64())
+		} else {
+			return false
+		}
 	case reflect.Uint8:
-		v.SetUint(Cast[Long](obj).Uint64())
+		fallthrough
 	case reflect.Uint16:
-		v.SetUint(Cast[Long](obj).Uint64())
+		fallthrough
 	case reflect.Uint32:
-		v.SetUint(Cast[Long](obj).Uint64())
+		fallthrough
 	case reflect.Uint64:
-		v.SetUint(Cast[Long](obj).Uint64())
+		fallthrough
 	case reflect.Uint:
-		v.SetUint(Cast[Long](obj).Uint64())
+		if obj.IsLong() {
+			v.SetUint(Cast[Long](obj).Uint64())
+		} else {
+			return false
+		}
 	case reflect.Float32:
-		v.SetFloat(Cast[Float](obj).Float64())
+		fallthrough
 	case reflect.Float64:
-		v.SetFloat(Cast[Float](obj).Float64())
+		if obj.IsFloat() {
+			v.SetFloat(Cast[Float](obj).Float64())
+		} else {
+			return false
+		}
 	case reflect.Complex64, reflect.Complex128:
-		v.SetComplex(Cast[Complex](obj).Complex128())
+		if obj.IsComplex() {
+			v.SetComplex(Cast[Complex](obj).Complex128())
+		} else {
+			return false
+		}
 	case reflect.String:
-		v.SetString(Cast[Str](obj).String())
+		if obj.IsStr() {
+			v.SetString(Cast[Str](obj).String())
+		} else {
+			return false
+		}
 	case reflect.Bool:
-		v.SetBool(Cast[Bool](obj).Bool())
+		if obj.IsBool() {
+			v.SetBool(Cast[Bool](obj).Bool())
+		} else {
+			return false
+		}
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.Uint8 { // []byte
-			v.SetBytes(Cast[Bytes](obj).Bytes())
-		} else {
-			list := Cast[List](obj)
-			l := list.Len()
-			slice := reflect.MakeSlice(v.Type(), l, l)
-			for i := 0; i < l; i++ {
-				item := list.GetItem(i)
-				ToValue(item, slice.Index(i))
+			if obj.IsBytes() {
+				v.SetBytes(Cast[Bytes](obj).Bytes())
+			} else {
+				return false
 			}
-			v.Set(slice)
+		} else {
+			if obj.IsList() {
+				list := Cast[List](obj)
+				l := list.Len()
+				slice := reflect.MakeSlice(v.Type(), l, l)
+				for i := 0; i < l; i++ {
+					item := list.GetItem(i)
+					ToValue(item, slice.Index(i))
+				}
+				v.Set(slice)
+			} else {
+				return false
+			}
+		}
+	case reflect.Map:
+		if obj.IsDict() {
+			t := v.Type()
+			v.Set(reflect.MakeMap(t))
+			dict := Cast[Dict](obj)
+			dict.ForEach(func(key, value Object) {
+				vk := reflect.New(t.Key()).Elem()
+				vv := reflect.New(t.Elem()).Elem()
+				if !ToValue(key, vk) || !ToValue(value, vv) {
+					panic(fmt.Errorf("failed to convert key or value to %v", t.Key()))
+				}
+				v.SetMapIndex(vk, vv)
+			})
+		} else {
+			return false
+		}
+	case reflect.Struct:
+		if obj.IsDict() {
+			dict := Cast[Dict](obj)
+			t := v.Type()
+			for i := 0; i < t.NumField(); i++ {
+				field := t.Field(i)
+				key := goNameToPythonName(field.Name)
+				value := dict.Get(MakeStr(key))
+				if !ToValue(value, v.Field(i)) {
+					panic(fmt.Errorf("failed to convert value to %v", field.Name))
+				}
+			}
+		} else {
+			return false
 		}
 	default:
 		panic(fmt.Errorf("unsupported type conversion from Python object to %v", v.Type()))
@@ -358,4 +467,24 @@ func fromMap(v reflect.Value) Dict {
 		dict.Set(From(key.Interface()), From(v.MapIndex(key).Interface()))
 	}
 	return dict
+}
+
+func fromStruct(v reflect.Value) Object {
+	ty := v.Type()
+	if typeObj, ok := pyTypeMap[ty]; ok {
+		obj := newObject(C._PyObject_New((*C.PyTypeObject)(unsafe.Pointer(typeObj))))
+		for i := 0; i < ty.NumField(); i++ {
+			field := ty.Field(i)
+			key := goNameToPythonName(field.Name)
+			obj.SetAttr(key, From(v.Field(i).Interface()))
+		}
+		return obj
+	}
+	dict := newDict(C.PyDict_New())
+	for i := 0; i < ty.NumField(); i++ {
+		field := ty.Field(i)
+		key := goNameToPythonName(field.Name)
+		dict.Set(MakeStr(key).Object, From(v.Field(i).Interface()))
+	}
+	return dict.Object
 }
