@@ -4,6 +4,7 @@ package gp
 #include <Python.h>
 */
 import "C"
+import "unsafe"
 
 type Module struct {
 	Object
@@ -14,7 +15,9 @@ func newModule(obj *PyObject) Module {
 }
 
 func ImportModule(name string) Module {
-	mod := C.PyImport_ImportModule(AllocCStr(name))
+	cname := AllocCStr(name)
+	mod := C.PyImport_ImportModule(cname)
+	C.free(unsafe.Pointer(cname))
 	return newModule(mod)
 }
 
@@ -27,11 +30,15 @@ func (m Module) Dict() Dict {
 }
 
 func (m Module) AddObject(name string, obj Object) int {
-	return int(C.PyModule_AddObject(m.obj, AllocCStr(name), obj.obj))
+	cname := AllocCStr(name)
+	r := int(C.PyModule_AddObject(m.obj, cname, obj.obj))
+	C.free(unsafe.Pointer(cname))
+	return r
 }
 
 func CreateModule(name string) Module {
-	return newModule(C.PyModule_New(AllocCStr(name)))
+	mod := C.PyModule_New(AllocCStrDontFree(name))
+	return newModule(mod)
 }
 
 func GetModuleDict() Dict {

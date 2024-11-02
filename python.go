@@ -35,7 +35,12 @@ const (
 )
 
 func CompileString(code, filename string, start InputType) Object {
-	return newObject(C.Py_CompileString(AllocCStr(code), AllocCStr(filename), C.int(start)))
+	ccode := AllocCStr(code)
+	cfilename := AllocCStr(filename)
+	o := C.Py_CompileString(ccode, cfilename, C.int(start))
+	C.free(unsafe.Pointer(ccode))
+	C.free(unsafe.Pointer(cfilename))
+	return newObject(o)
 }
 
 func EvalCode(code Object, globals, locals Dict) Object {

@@ -67,50 +67,53 @@ func (obj Object) Dir() List {
 	return obj.Call("__dir__").AsList()
 }
 
-func (obj Object) GetAttr(name string) Object {
-	o := C.PyObject_GetAttrString(obj.obj, AllocCStr(name))
-	C.Py_IncRef(o)
+func (obj Object) Attr(name string) Object {
+	cname := AllocCStr(name)
+	o := C.PyObject_GetAttrString(obj.obj, cname)
+	C.free(unsafe.Pointer(cname))
 	return newObject(o)
 }
 
-func (obj Object) GetFloatAttr(name string) Float {
-	return obj.GetAttr(name).AsFloat()
+func (obj Object) AttrFloat(name string) Float {
+	return obj.Attr(name).AsFloat()
 }
 
-func (obj Object) GetLongAttr(name string) Long {
-	return obj.GetAttr(name).AsLong()
+func (obj Object) AttrLong(name string) Long {
+	return obj.Attr(name).AsLong()
 }
 
-func (obj Object) GetStrAttr(name string) Str {
-	return obj.GetAttr(name).AsStr()
+func (obj Object) AttrString(name string) Str {
+	return obj.Attr(name).AsStr()
 }
 
-func (obj Object) GetBytesAttr(name string) Bytes {
-	return obj.GetAttr(name).AsBytes()
+func (obj Object) AttrBytes(name string) Bytes {
+	return obj.Attr(name).AsBytes()
 }
 
-func (obj Object) GetBoolAttr(name string) Bool {
-	return obj.GetAttr(name).AsBool()
+func (obj Object) AttrBool(name string) Bool {
+	return obj.Attr(name).AsBool()
 }
 
-func (obj Object) GetDictAttr(name string) Dict {
-	return obj.GetAttr(name).AsDict()
+func (obj Object) AttrDict(name string) Dict {
+	return obj.Attr(name).AsDict()
 }
 
-func (obj Object) GetListAttr(name string) List {
-	return obj.GetAttr(name).AsList()
+func (obj Object) AttrList(name string) List {
+	return obj.Attr(name).AsList()
 }
 
-func (obj Object) GetTupleAttr(name string) Tuple {
-	return obj.GetAttr(name).AsTuple()
+func (obj Object) AttrTuple(name string) Tuple {
+	return obj.Attr(name).AsTuple()
 }
 
-func (obj Object) GetFuncAttr(name string) Func {
-	return obj.GetAttr(name).AsFunc()
+func (obj Object) AttrFunc(name string) Func {
+	return obj.Attr(name).AsFunc()
 }
 
-func (obj Object) SetAttr(name string, value Object) {
-	C.PyObject_SetAttrString(obj.obj, AllocCStr(name), value.obj)
+func (obj Object) SetAttr(name string, value any) {
+	cname := AllocCStr(name)
+	C.PyObject_SetAttrString(obj.obj, cname, From(value).obj)
+	C.free(unsafe.Pointer(cname))
 }
 
 func (obj Object) IsLong() bool {
@@ -194,7 +197,7 @@ func (obj Object) AsModule() Module {
 }
 
 func (obj Object) Call(name string, args ...any) Object {
-	fn := Cast[Func](obj.GetAttr(name))
+	fn := Cast[Func](obj.Attr(name))
 	argsTuple, kwArgs := splitArgs(args...)
 	if kwArgs == nil {
 		return fn.CallObject(argsTuple)
@@ -208,7 +211,7 @@ func (obj Object) Repr() string {
 }
 
 func (obj Object) Type() Object {
-	return obj.GetAttr("__class__")
+	return obj.Attr("__class__")
 }
 
 func (obj Object) String() string {
@@ -249,7 +252,10 @@ func From(v any) Object {
 	case float64:
 		return newObject(C.PyFloat_FromDouble(C.double(v)))
 	case string:
-		return newObject(C.PyUnicode_FromString(AllocCStr(v)))
+		cstr := AllocCStr(v)
+		o := C.PyUnicode_FromString(cstr)
+		C.free(unsafe.Pointer(cstr))
+		return newObject(o)
 	case complex128:
 		return MakeComplex(v).Object
 	case complex64:
@@ -463,8 +469,9 @@ func fromSlice(v reflect.Value) List {
 
 func fromMap(v reflect.Value) Dict {
 	dict := newDict(C.PyDict_New())
-	for _, key := range v.MapKeys() {
-		dict.Set(From(key.Interface()), From(v.MapIndex(key).Interface()))
+	iter := v.MapRange()
+	for iter.Next() {
+		dict.Set(From(iter.Key().Interface()), From(iter.Value().Interface()))
 	}
 	return dict
 }

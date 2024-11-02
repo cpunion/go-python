@@ -33,7 +33,9 @@ func (t Tuple) Get(index int) Object {
 }
 
 func (t Tuple) Set(index int, obj Objecter) {
-	C.PyTuple_SetItem(t.obj, C.Py_ssize_t(index), obj.Obj())
+	objObj := obj.Obj()
+	C.Py_IncRef(objObj)
+	C.PyTuple_SetItem(t.obj, C.Py_ssize_t(index), objObj)
 }
 
 func (t Tuple) Len() int {

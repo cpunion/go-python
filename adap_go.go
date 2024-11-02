@@ -18,6 +18,10 @@ func AllocCStr(s string) *C.char {
 	return C.CString(s)
 }
 
+func AllocCStrDontFree(s string) *C.char {
+	return C.CString(s)
+}
+
 func AllocWCStr(s string) *C.wchar_t {
 	runes := []rune(s)
 	wchars := make([]uint16, len(runes)+1)
