@@ -29,9 +29,9 @@ func CreateFunc(fn any, doc string) Func {
 	return m.AddMethod("", fn, doc)
 }
 
-type wrapperType[T any] struct {
+type wrapperType struct {
 	PyObject
-	v T
+	v byte
 }
 
 type slotMetaType int
@@ -70,10 +70,9 @@ func wrapperAlloc(typ *C.PyTypeObject, size C.Py_ssize_t) *C.PyObject {
 	self := C.PyType_GenericAlloc(typ, size)
 	if self != nil {
 		meta := typeMetaMap[(*C.PyObject)(unsafe.Pointer(typ))]
-		wrapper := (*wrapperType[any])(unsafe.Pointer(self))
-
-		wrapperVal := reflect.ValueOf(&wrapper.v).Elem()
-		wrapperVal.Set(reflect.New(meta.typ).Elem())
+		wrapper := (*wrapperType)(unsafe.Pointer(self))
+		vPtr := unsafe.Pointer(&wrapper.v)
+		reflect.NewAt(meta.typ, vPtr).Elem().Set(reflect.New(meta.typ).Elem())
 	}
 	return self
 }
@@ -107,7 +106,7 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 		SetError(fmt.Errorf("method %d is not a getter method", methodId))
 		return nil
 	}
-	wrapper := (*wrapperType[any])(unsafe.Pointer(self))
+	wrapper := (*wrapperType)(unsafe.Pointer(self))
 	vPtr := unsafe.Pointer(&wrapper.v)
 	goValue := reflect.NewAt(typeMeta.typ, vPtr).Elem()
 	field := goValue.Field(methodMeta.index)
@@ -130,7 +129,7 @@ func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.i
 		SetError(fmt.Errorf("method %d is not a setter method", methodId))
 		return -1
 	}
-	wrapper := (*wrapperType[any])(unsafe.Pointer(self))
+	wrapper := (*wrapperType)(unsafe.Pointer(self))
 	vPtr := unsafe.Pointer(&wrapper.v)
 	goValue := reflect.NewAt(typeMeta.typ, vPtr).Elem()
 	field := goValue.Field(methodMeta.index)
@@ -183,8 +182,7 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 	argIndex := 0
 
 	if hasReceiver {
-		// Get the wrapper and create receiver
-		wrapper := (*wrapperType[any])(unsafe.Pointer(self))
+		wrapper := (*wrapperType)(unsafe.Pointer(self))
 		vPtr := unsafe.Pointer(&wrapper.v)
 		recv := reflect.NewAt(typeMeta.typ, vPtr)
 
@@ -325,7 +323,7 @@ func getMemberType(t reflect.Type) C.int {
 }
 
 func getMembers(t reflect.Type, methods map[uint]*slotMeta) (members *C.PyMemberDef, getsets *C.PyGetSetDef) {
-	baseOffset := unsafe.Offsetof(wrapperType[any]{}.v)
+	baseOffset := unsafe.Offsetof(wrapperType{}.v)
 	membersList := make([]C.PyMemberDef, 0)
 	getsetsList := make([]C.PyGetSetDef, 0)
 
@@ -406,13 +404,16 @@ func getMembers(t reflect.Type, methods map[uint]*slotMeta) (members *C.PyMember
 	return membersPtr, getsetsPtr
 }
 
-func AddType[T any](m Module, init any, name string, doc string) Object {
-	wrapper := wrapperType[T]{}
-	ty := reflect.TypeOf(wrapper.v)
+func (m Module) AddType(obj, init any, name, doc string) Object {
+	ty := reflect.TypeOf(obj)
+	if ty.Kind() == reflect.Ptr {
+		ty = ty.Elem()
+	}
 	if ty.Kind() != reflect.Struct {
-		panic("AddType: t must be a struct")
+		panic("AddType: obj must be a struct or pointer to struct")
 	}
 
+	wrapper := wrapperType{}
 	meta := &typeMeta{
 		typ:     ty,
 		wrapTyp: reflect.TypeOf(wrapper),
@@ -447,9 +448,10 @@ func AddType[T any](m Module, init any, name string, doc string) Object {
 		*currentSlot = slot
 	}
 
+	totalSize := unsafe.Offsetof(wrapper.v) + ty.Size()
 	spec := &C.PyType_Spec{
 		name:      C.CString(name),
-		basicsize: C.int(unsafe.Sizeof(wrapper)),
+		basicsize: C.int(totalSize),
 		flags:     C.Py_TPFLAGS_DEFAULT,
 		slots:     slotsPtr,
 	}

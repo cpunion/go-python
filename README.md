@@ -136,7 +136,7 @@ func InitFooModule() gp.Module {
 	// Add the function to the module
 	m.AddMethod("add", Add, "(a, b) -> float\n--\n\nAdd two integers.")
 	// Add the type to the module
-	gp.AddType[Point](m, (*Point).init, "Point", "Point objects")
+	m.AddType(Point{}, (*Point).init, "Point", "Point objects")
 	return m
 }
 

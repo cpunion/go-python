@@ -39,7 +39,7 @@ func TestAddType(t *testing.T) {
 	m := MainModule()
 
 	// test add type
-	typ := AddType[TestStruct](m, nil, "TestStruct", "Test struct documentation")
+	typ := m.AddType(TestStruct{}, nil, "TestStruct", "Test struct documentation")
 	if typ.Nil() {
 		t.Fatal("Failed to create type")
 	}
@@ -125,7 +125,7 @@ func TestAddTypeWithInit(t *testing.T) {
 	setupTest(t)
 	m := MainModule()
 
-	typ := AddType[InitTestStruct](m, (*InitTestStruct).Init, "InitTestStruct", "Test init struct")
+	typ := m.AddType(InitTestStruct{}, (*InitTestStruct).Init, "InitTestStruct", "Test init struct")
 	if typ.Nil() {
 		t.Fatal("Failed to create type with init")
 	}
