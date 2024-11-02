@@ -22,6 +22,6 @@ func main() {
 	gp.Initialize()
 	defer gp.Finalize()
 	plt := Plt()
-	plt.Plot(gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
+	plt.Plot([]int{5, 10}, []int{10, 15}, gp.KwArgs{"color": "red"})
 	plt.Show()
 }

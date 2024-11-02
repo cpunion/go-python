@@ -4,7 +4,10 @@ package gp
 #include <Python.h>
 */
 import "C"
-import "fmt"
+import (
+	"fmt"
+	"unsafe"
+)
 
 type Dict struct {
 	Object
@@ -47,26 +50,32 @@ func (d Dict) Get(key Objecter) Object {
 	return newObject(v)
 }
 
-func (d Dict) Set(key, value Object) {
-	C.Py_IncRef(key.obj)
-	C.Py_IncRef(value.obj)
-	C.PyDict_SetItem(d.obj, key.obj, value.obj)
+func (d Dict) Set(key, value Objecter) {
+	keyObj := key.Obj()
+	valueObj := value.Obj()
+	C.PyDict_SetItem(d.obj, keyObj, valueObj)
 }
 
-func (d Dict) SetString(key string, value Object) {
-	C.Py_IncRef(value.obj)
-	C.PyDict_SetItemString(d.obj, AllocCStr(key), value.obj)
+func (d Dict) SetString(key string, value Objecter) {
+	valueObj := value.Obj()
+	ckey := AllocCStr(key)
+	r := C.PyDict_SetItemString(d.obj, ckey, valueObj)
+	C.free(unsafe.Pointer(ckey))
+	if r != 0 {
+		panic(fmt.Errorf("failed to set item string: %v", r))
+	}
 }
 
 func (d Dict) GetString(key string) Object {
-	v := C.PyDict_GetItemString(d.obj, AllocCStr(key))
+	ckey := AllocCStr(key)
+	v := C.PyDict_GetItemString(d.obj, ckey)
 	C.Py_IncRef(v)
+	C.free(unsafe.Pointer(ckey))
 	return newObject(v)
 }
 
-func (d Dict) Del(key Object) {
-	C.PyDict_DelItem(d.obj, key.obj)
-	C.Py_DecRef(key.obj)
+func (d Dict) Del(key Objecter) {
+	C.PyDict_DelItem(d.obj, key.Obj())
 }
 
 func (d Dict) ForEach(fn func(key, value Object)) {
@@ -84,6 +93,9 @@ func (d Dict) ForEach(fn func(key, value Object)) {
 		C.Py_IncRef(item)
 		key := C.PyTuple_GetItem(item, 0)
 		value := C.PyTuple_GetItem(item, 1)
+		C.Py_IncRef(key)
+		C.Py_IncRef(value)
+		C.Py_DecRef(item)
 		fn(newObject(key), newObject(value))
 	}
 }

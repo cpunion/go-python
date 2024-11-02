@@ -4,6 +4,7 @@ package gp
 #include <Python.h>
 */
 import "C"
+import "unsafe"
 
 type Long struct {
 	Object
@@ -35,7 +36,9 @@ func LongFromFloat64(v float64) Long {
 
 func LongFromString(s string, base int) Long {
 	cstr := AllocCStr(s)
-	return newLong(C.PyLong_FromString(cstr, nil, C.int(base)))
+	o := C.PyLong_FromString(cstr, nil, C.int(base))
+	C.free(unsafe.Pointer(cstr))
+	return newLong(o)
 }
 
 func LongFromUnicode(u Object, base int) Long {

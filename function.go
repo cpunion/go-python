@@ -154,7 +154,7 @@ func wrapperInit(self, args *C.PyObject) C.int {
 }
 
 //export getterMethod
-func getterMethod(self *C.PyObject, closure unsafe.Pointer, methodId C.int) *C.PyObject {
+func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.PyObject {
 	typeMeta := typeMetaMap[(*C.PyObject)(unsafe.Pointer(self.ob_type))]
 	if typeMeta == nil {
 		SetError(fmt.Errorf("type %v not registered", FromPy(self)))
@@ -177,7 +177,7 @@ func getterMethod(self *C.PyObject, closure unsafe.Pointer, methodId C.int) *C.P
 }
 
 //export setterMethod
-func setterMethod(self, value *C.PyObject, closure unsafe.Pointer, methodId C.int) C.int {
+func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.int) C.int {
 	typeMeta := typeMetaMap[(*C.PyObject)(unsafe.Pointer(self.ob_type))]
 	if typeMeta == nil {
 		SetError(fmt.Errorf("type %v not registered", FromPy(self)))
@@ -260,6 +260,7 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 
 	for i := 0; i < int(argc); i++ {
 		arg := C.PyTuple_GetItem(args, C.Py_ssize_t(i))
+		C.Py_IncRef(arg)
 		argType := methodType.In(i + argIndex)
 		argPy := FromPy(arg)
 		goValue := reflect.New(argType).Elem()
@@ -316,7 +317,7 @@ func getMethods_(t reflect.Type, methods map[uint]*slotMeta) (ret []C.PyMethodDe
 			methodPtr := C.wrapperMethods[methodId]
 
 			ret = append(ret, C.PyMethodDef{
-				ml_name:  C.CString(pythonName),
+				ml_name:  AllocCStrDontFree(pythonName),
 				ml_meth:  (C.PyCFunction)(unsafe.Pointer(methodPtr)),
 				ml_flags: C.METH_VARARGS,
 				ml_doc:   nil,
@@ -402,7 +403,7 @@ func getMembers(t reflect.Type, methods map[uint]*slotMeta) (members *C.PyMember
 		if memberType != -1 {
 			// create as member variable for C-compatible types
 			membersList = append(membersList, C.PyMemberDef{
-				name:   C.CString(pythonName),
+				name:   AllocCStrDontFree(pythonName),
 				_type:  memberType,
 				offset: C.Py_ssize_t(baseOffset + field.Offset),
 			})
@@ -429,7 +430,7 @@ func getMembers(t reflect.Type, methods map[uint]*slotMeta) (members *C.PyMember
 				index:      i,
 			}
 			getsetsList = append(getsetsList, C.PyGetSetDef{
-				name:    C.CString(pythonName),
+				name:    AllocCStrDontFree(pythonName),
 				get:     C.getterMethods[getId],
 				set:     C.setterMethods[setId],
 				doc:     nil,
@@ -480,9 +481,6 @@ func AddType[T any](m Module, init any, name string, doc string) Object {
 		methods: make(map[uint]*slotMeta),
 	}
 
-	cname := C.CString(name)
-	defer C.free(unsafe.Pointer(cname))
-
 	slots := make([]C.PyType_Slot, 0)
 	if init != nil {
 		slots = append(slots, C.PyType_Slot{slot: C.Py_tp_init, pfunc: unsafe.Pointer(C.wrapperInit)})
@@ -512,7 +510,7 @@ func AddType[T any](m Module, init any, name string, doc string) Object {
 	}
 
 	spec := &C.PyType_Spec{
-		name:      cname,
+		name:      C.CString(name),
 		basicsize: C.int(unsafe.Sizeof(wrapper)),
 		flags:     C.Py_TPFLAGS_DEFAULT,
 		slots:     slotsPtr,
@@ -526,7 +524,7 @@ func AddType[T any](m Module, init any, name string, doc string) Object {
 	typeMetaMap[typeObj] = meta
 	pyTypeMap[ty] = typeObj
 
-	if C.PyModule_AddObject(m.obj, cname, typeObj) < 0 {
+	if C.PyModule_AddObject(m.obj, C.CString(name), typeObj) < 0 {
 		C.Py_DecRef(typeObj)
 		panic(fmt.Sprintf("Failed to add type %s to module", name))
 	}
@@ -599,14 +597,14 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 
 func SetError(err error) {
 	errStr := C.CString(err.Error())
-	defer C.free(unsafe.Pointer(errStr))
 	C.PyErr_SetString(C.PyExc_RuntimeError, errStr)
+	C.free(unsafe.Pointer(errStr))
 }
 
 func SetTypeError(err error) {
 	errStr := C.CString(err.Error())
-	defer C.free(unsafe.Pointer(errStr))
 	C.PyErr_SetString(C.PyExc_TypeError, errStr)
+	C.free(unsafe.Pointer(errStr))
 }
 
 // FetchError returns the current Python error as a Go error

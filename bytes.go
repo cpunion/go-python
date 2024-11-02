@@ -22,12 +22,14 @@ func BytesFromStr(s string) Bytes {
 
 func MakeBytes(bytes []byte) Bytes {
 	ptr := C.CBytes(bytes)
-	return newBytes(C.PyBytes_FromStringAndSize((*C.char)(ptr), C.Py_ssize_t(len(bytes))))
+	o := C.PyBytes_FromStringAndSize((*C.char)(ptr), C.Py_ssize_t(len(bytes)))
+	C.free(unsafe.Pointer(ptr))
+	return newBytes(o)
 }
 
 func (b Bytes) Bytes() []byte {
-	var p *byte
-	var l int
+	p := (*byte)(unsafe.Pointer(C.PyBytes_AsString(b.obj)))
+	l := int(C.PyBytes_Size(b.obj))
 	return C.GoBytes(unsafe.Pointer(p), C.int(l))
 }
 

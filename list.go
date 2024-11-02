@@ -28,14 +28,16 @@ func (l List) GetItem(index int) Object {
 	return newObject(v)
 }
 
-func (l List) SetItem(index int, item Object) {
-	C.PyList_SetItem(l.obj, C.Py_ssize_t(index), item.obj)
+func (l List) SetItem(index int, item Objecter) {
+	itemObj := item.Obj()
+	C.Py_IncRef(itemObj)
+	C.PyList_SetItem(l.obj, C.Py_ssize_t(index), itemObj)
 }
 
 func (l List) Len() int {
 	return int(C.PyList_Size(l.obj))
 }
 
-func (l List) Append(obj Object) {
-	C.PyList_Append(l.obj, obj.obj)
+func (l List) Append(obj Objecter) {
+	C.PyList_Append(l.obj, obj.Obj())
 }

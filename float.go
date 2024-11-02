@@ -22,6 +22,6 @@ func (f Float) Float64() float64 {
 }
 
 func (f Float) IsInteger() Bool {
-	fn := Cast[Func](f.GetAttr("is_integer"))
+	fn := Cast[Func](f.Attr("is_integer"))
 	return Cast[Bool](fn.callNoArgs())
 }

@@ -60,7 +60,7 @@ func main() {
 		})
 		textbox := gr.Call("Textbox")
 		examples := gr.Call("Examples", [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}}, textbox)
-		dataset := examples.GetAttr("dataset")
+		dataset := examples.Attr("dataset")
 		dropdown.Call("change", fn, dropdown, dataset)
 	})
 	demo.Call("launch")
