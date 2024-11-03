@@ -5,6 +5,7 @@ import (
 )
 
 func TestMakeStr(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name      string
 		input     string
@@ -50,28 +51,27 @@ func TestMakeStr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pyStr := MakeStr(tt.input)
+		pyStr := MakeStr(tt.input)
 
-			// Test String() method
-			if got := pyStr.String(); got != tt.expected {
-				t.Errorf("MakeStr(%q).String() = %q, want %q", tt.input, got, tt.expected)
-			}
+		// Test String() method
+		if got := pyStr.String(); got != tt.expected {
+			t.Errorf("MakeStr(%q).String() = %q, want %q", tt.input, got, tt.expected)
+		}
 
-			// Test Len() method
-			if got := pyStr.Len(); got != tt.length {
-				t.Errorf("MakeStr(%q).Len() = %d, want %d", tt.input, got, tt.length)
-			}
+		// Test Len() method
+		if got := pyStr.Len(); got != tt.length {
+			t.Errorf("MakeStr(%q).Len() = %d, want %d", tt.input, got, tt.length)
+		}
 
-			// Test ByteLen() method
-			if got := pyStr.ByteLen(); got != tt.byteCount {
-				t.Errorf("MakeStr(%q).ByteLen() = %d, want %d", tt.input, got, tt.byteCount)
-			}
-		})
+		// Test ByteLen() method
+		if got := pyStr.ByteLen(); got != tt.byteCount {
+			t.Errorf("MakeStr(%q).ByteLen() = %d, want %d", tt.input, got, tt.byteCount)
+		}
 	}
 }
 
 func TestStrEncode(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		input    string
@@ -90,14 +90,12 @@ func TestStrEncode(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pyStr := MakeStr(tt.input)
-			encoded := pyStr.Encode(tt.encoding)
-			decoded := encoded.Decode(tt.encoding)
+		pyStr := MakeStr(tt.input)
+		encoded := pyStr.Encode(tt.encoding)
+		decoded := encoded.Decode(tt.encoding)
 
-			if got := decoded.String(); got != tt.input {
-				t.Errorf("String encode/decode roundtrip failed: got %q, want %q", got, tt.input)
-			}
-		})
+		if got := decoded.String(); got != tt.input {
+			t.Errorf("String encode/decode roundtrip failed: got %q, want %q", got, tt.input)
+		}
 	}
 }

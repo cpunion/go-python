@@ -5,6 +5,7 @@ import (
 )
 
 func TestTupleCreation(t *testing.T) {
+	setupTest(t)
 	// Test empty tuple
 	empty := MakeTupleWithLen(0)
 	if empty.Len() != 0 {
@@ -19,6 +20,7 @@ func TestTupleCreation(t *testing.T) {
 }
 
 func TestTupleGetSet(t *testing.T) {
+	setupTest(t)
 	tuple := MakeTupleWithLen(2)
 
 	// Test setting and getting values
@@ -34,6 +36,7 @@ func TestTupleGetSet(t *testing.T) {
 }
 
 func TestTupleSlice(t *testing.T) {
+	setupTest(t)
 	tuple := MakeTuple(1, 2, 3, 4, 5)
 
 	// Test slicing
@@ -51,6 +54,7 @@ func TestTupleSlice(t *testing.T) {
 }
 
 func TestTupleParseArgs(t *testing.T) {
+	setupTest(t)
 	tuple := MakeTuple(42, "hello", 3.14, true)
 
 	var (
@@ -95,6 +99,7 @@ func TestTupleParseArgs(t *testing.T) {
 }
 
 func TestTupleParseArgsTypes(t *testing.T) {
+	setupTest(t)
 	// Test all supported numeric types
 	tuple := MakeTuple(42, 42, 42, 42, 42, 42, 42, 42, 42, 42)
 

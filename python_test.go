@@ -1,18 +1,21 @@
 package gp
 
 import (
-	"os"
+	"runtime"
 	"testing"
 )
 
-func TestMain(m *testing.M) {
+func setupTest(t *testing.T) {
+	runtime.LockOSThread()
 	Initialize()
-	code := m.Run()
-	Finalize()
-	os.Exit(code)
+	t.Cleanup(func() {
+		runtime.GC()
+		Finalize()
+	})
 }
 
 func TestRunString(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name    string
 		code    string
@@ -36,16 +39,15 @@ func TestRunString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := RunString(tt.code)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("RunString() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+		err := RunString(tt.code)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("RunString() error = %v, wantErr %v", err, tt.wantErr)
+		}
 	}
 }
 
 func TestCompileString(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		code     string
@@ -70,16 +72,15 @@ func TestCompileString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			obj := CompileString(tt.code, tt.filename, tt.start)
-			if obj.Nil() != tt.wantNil {
-				t.Errorf("CompileString() returned nil = %v, want %v", obj.Nil(), tt.wantNil)
-			}
-		})
+		obj := CompileString(tt.code, tt.filename, tt.start)
+		if obj.Nil() != tt.wantNil {
+			t.Errorf("CompileString() returned nil = %v, want %v", obj.Nil(), tt.wantNil)
+		}
 	}
 }
 
 func TestNone(t *testing.T) {
+	setupTest(t)
 	none := None()
 	if none.Nil() {
 		t.Error("None() returned nil object")
@@ -87,6 +88,7 @@ func TestNone(t *testing.T) {
 }
 
 func TestNil(t *testing.T) {
+	setupTest(t)
 	nil_ := Nil()
 	if !nil_.Nil() {
 		t.Error("Nil() did not return nil object")
@@ -94,6 +96,7 @@ func TestNil(t *testing.T) {
 }
 
 func TestMainModule(t *testing.T) {
+	setupTest(t)
 	main := MainModule()
 	if main.Nil() {
 		t.Error("MainModule() returned nil")
@@ -101,6 +104,7 @@ func TestMainModule(t *testing.T) {
 }
 
 func TestWith(t *testing.T) {
+	setupTest(t)
 	// First create a simple Python context manager class
 	code := `
 class TestContextManager:

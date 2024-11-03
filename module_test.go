@@ -5,6 +5,7 @@ import (
 )
 
 func TestModuleImport(t *testing.T) {
+	setupTest(t)
 	Initialize()
 	defer Finalize()
 
@@ -27,6 +28,7 @@ func TestModuleImport(t *testing.T) {
 }
 
 func TestGetModule(t *testing.T) {
+	setupTest(t)
 	Initialize()
 	defer Finalize()
 
@@ -49,6 +51,7 @@ func TestGetModule(t *testing.T) {
 }
 
 func TestCreateModule(t *testing.T) {
+	setupTest(t)
 	Initialize()
 	defer Finalize()
 
@@ -80,6 +83,7 @@ func TestCreateModule(t *testing.T) {
 }
 
 func TestGetModuleDict(t *testing.T) {
+	setupTest(t)
 	Initialize()
 	defer Finalize()
 

@@ -58,7 +58,7 @@ func newObject(obj *PyObject) Object {
 	o := &pyObject{obj: obj}
 	p := Object{o}
 	runtime.SetFinalizer(o, func(o *pyObject) {
-		C.Py_DecRef(o.obj)
+		// C.Py_DecRef(o.obj)
 	})
 	return p
 }

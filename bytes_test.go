@@ -6,6 +6,7 @@ import (
 )
 
 func TestBytesCreation(t *testing.T) {
+	setupTest(t)
 	// Test BytesFromStr
 	b1 := BytesFromStr("hello")
 	if string(b1.Bytes()) != "hello" {
@@ -21,6 +22,7 @@ func TestBytesCreation(t *testing.T) {
 }
 
 func TestBytesDecode(t *testing.T) {
+	setupTest(t)
 	// Test UTF-8 decode
 	b := BytesFromStr("你好")
 	if !bytes.Equal(b.Bytes(), []byte("你好")) {
@@ -40,6 +42,7 @@ func TestBytesDecode(t *testing.T) {
 }
 
 func TestBytesConversion(t *testing.T) {
+	setupTest(t)
 	original := []byte{0x48, 0x65, 0x6c, 0x6c, 0x6f} // "Hello" in hex
 	b := MakeBytes(original)
 

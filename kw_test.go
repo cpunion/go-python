@@ -6,6 +6,7 @@ import (
 )
 
 func TestSplitArgs(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name    string
 		args    []any
@@ -39,21 +40,20 @@ func TestSplitArgs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotTup, gotKw := splitArgs(tt.args...)
+		gotTup, gotKw := splitArgs(tt.args...)
 
-			if !reflect.DeepEqual(gotTup, tt.wantTup) {
-				t.Errorf("splitArgs() tuple = %v, want %v", gotTup, tt.wantTup)
-			}
+		if !reflect.DeepEqual(gotTup, tt.wantTup) {
+			t.Errorf("splitArgs() tuple = %v, want %v", gotTup, tt.wantTup)
+		}
 
-			if !reflect.DeepEqual(gotKw, tt.wantKw) {
-				t.Errorf("splitArgs() kwargs = %v, want %v", gotKw, tt.wantKw)
-			}
-		})
+		if !reflect.DeepEqual(gotKw, tt.wantKw) {
+			t.Errorf("splitArgs() kwargs = %v, want %v", gotKw, tt.wantKw)
+		}
 	}
 }
 
 func TestKwArgs(t *testing.T) {
+	setupTest(t)
 	kw := KwArgs{
 		"name": "test",
 		"age":  42,

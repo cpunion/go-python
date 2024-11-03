@@ -5,6 +5,7 @@ import (
 )
 
 func TestAllocCStr(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name  string
 		input string
@@ -16,17 +17,16 @@ func TestAllocCStr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cstr := AllocCStr(tt.input)
-			got := GoString(cstr)
-			if got != tt.want {
-				t.Errorf("AllocCStr() = %v, want %v", got, tt.want)
-			}
-		})
+		cstr := AllocCStr(tt.input)
+		got := GoString(cstr)
+		if got != tt.want {
+			t.Errorf("AllocCStr() = %v, want %v", got, tt.want)
+		}
 	}
 }
 
 func TestGoStringN(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name  string
 		input string
@@ -41,17 +41,16 @@ func TestGoStringN(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cstr := AllocCStr(tt.input)
-			got := GoStringN(cstr, tt.n)
-			if got != tt.want {
-				t.Errorf("GoStringN() = %v, want %v", got, tt.want)
-			}
-		})
+		cstr := AllocCStr(tt.input)
+		got := GoStringN(cstr, tt.n)
+		if got != tt.want {
+			t.Errorf("GoStringN() = %v, want %v", got, tt.want)
+		}
 	}
 }
 
 func TestAllocCStrDontFree(t *testing.T) {
+	setupTest(t)
 	input := "test string"
 	cstr := AllocCStrDontFree(input)
 	got := GoString(cstr)
