@@ -4,10 +4,7 @@ package gp
 #include <Python.h>
 */
 import "C"
-import (
-	"reflect"
-	"unsafe"
-)
+import "unsafe"
 
 type Str struct {
 	Object
@@ -18,9 +15,8 @@ func newStr(obj *PyObject) Str {
 }
 
 func MakeStr(s string) Str {
-	hdr := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	ptr := (*C.char)(unsafe.Pointer(hdr.Data))
-	length := C.long(hdr.Len)
+	ptr := (*C.char)(unsafe.Pointer(unsafe.StringData(s)))
+	length := C.long(len(s))
 	return newStr(C.PyUnicode_FromStringAndSize(ptr, length))
 }
 
@@ -31,6 +27,10 @@ func (s Str) String() string {
 }
 
 func (s Str) Len() int {
+	return int(C.PyUnicode_GetLength(s.obj))
+}
+
+func (s Str) ByteLen() int {
 	var l C.long
 	C.PyUnicode_AsUTF8AndSize(s.obj, &l)
 	return int(l)
