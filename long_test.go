@@ -6,6 +6,7 @@ import (
 )
 
 func TestLongCreation(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		input    int64
@@ -19,16 +20,15 @@ func TestLongCreation(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := MakeLong(tt.input)
-			if got := l.Int64(); got != tt.expected {
-				t.Errorf("MakeLong(%d) = %d; want %d", tt.input, got, tt.expected)
-			}
-		})
+		l := MakeLong(tt.input)
+		if got := l.Int64(); got != tt.expected {
+			t.Errorf("MakeLong(%d) = %d; want %d", tt.input, got, tt.expected)
+		}
 	}
 }
 
 func TestLongFromFloat64(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		input    float64
@@ -40,16 +40,15 @@ func TestLongFromFloat64(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := LongFromFloat64(tt.input)
-			if got := l.Int64(); got != tt.expected {
-				t.Errorf("LongFromFloat64(%f) = %d; want %d", tt.input, got, tt.expected)
-			}
-		})
+		l := LongFromFloat64(tt.input)
+		if got := l.Int64(); got != tt.expected {
+			t.Errorf("LongFromFloat64(%f) = %d; want %d", tt.input, got, tt.expected)
+		}
 	}
 }
 
 func TestLongFromString(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		input    string
@@ -64,44 +63,36 @@ func TestLongFromString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := LongFromString(tt.input, tt.base)
-			if got := l.Int64(); got != tt.expected {
-				t.Errorf("LongFromString(%q, %d) = %d; want %d", tt.input, tt.base, got, tt.expected)
-			}
-		})
+		l := LongFromString(tt.input, tt.base)
+		if got := l.Int64(); got != tt.expected {
+			t.Errorf("LongFromString(%q, %d) = %d; want %d", tt.input, tt.base, got, tt.expected)
+		}
 	}
 }
 
 func TestLongConversions(t *testing.T) {
+	setupTest(t)
 	l := MakeLong(42)
 
-	t.Run("Int", func(t *testing.T) {
-		if got := l.Int(); got != 42 {
-			t.Errorf("Int() = %d; want 42", got)
-		}
-	})
+	if got := l.Int(); got != 42 {
+		t.Errorf("Int() = %d; want 42", got)
+	}
 
-	t.Run("Uint", func(t *testing.T) {
-		if got := l.Uint(); got != 42 {
-			t.Errorf("Uint() = %d; want 42", got)
-		}
-	})
+	if got := l.Uint(); got != 42 {
+		t.Errorf("Uint() = %d; want 42", got)
+	}
 
-	t.Run("Uint64", func(t *testing.T) {
-		if got := l.Uint64(); got != 42 {
-			t.Errorf("Uint64() = %d; want 42", got)
-		}
-	})
+	if got := l.Uint64(); got != 42 {
+		t.Errorf("Uint64() = %d; want 42", got)
+	}
 
-	t.Run("Float64", func(t *testing.T) {
-		if got := l.Float64(); got != 42.0 {
-			t.Errorf("Float64() = %f; want 42.0", got)
-		}
-	})
+	if got := l.Float64(); got != 42.0 {
+		t.Errorf("Float64() = %f; want 42.0", got)
+	}
 }
 
 func TestLongFromUintptr(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		input    uintptr
@@ -113,16 +104,15 @@ func TestLongFromUintptr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := LongFromUintptr(tt.input)
-			if got := l.Int64(); got != tt.expected {
-				t.Errorf("LongFromUintptr(%d) = %d; want %d", tt.input, got, tt.expected)
-			}
-		})
+		l := LongFromUintptr(tt.input)
+		if got := l.Int64(); got != tt.expected {
+			t.Errorf("LongFromUintptr(%d) = %d; want %d", tt.input, got, tt.expected)
+		}
 	}
 }
 
 func TestLongFromUnicode(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		input    string
@@ -134,13 +124,11 @@ func TestLongFromUnicode(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create Unicode object from string
-			u := MakeStr(tt.input)
-			l := LongFromUnicode(u.Object, tt.base)
-			if got := l.Int64(); got != tt.expected {
-				t.Errorf("LongFromUnicode(%q, %d) = %d; want %d", tt.input, tt.base, got, tt.expected)
-			}
-		})
+		// Create Unicode object from string
+		u := MakeStr(tt.input)
+		l := LongFromUnicode(u.Object, tt.base)
+		if got := l.Int64(); got != tt.expected {
+			t.Errorf("LongFromUnicode(%q, %d) = %d; want %d", tt.input, tt.base, got, tt.expected)
+		}
 	}
 }

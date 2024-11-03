@@ -52,19 +52,23 @@ func (obj Object) object() Object {
 
 func newObject(obj *PyObject) Object {
 	if obj == nil {
-		C.PyErr_Print()
 		return Object{}
 	}
 	o := &pyObject{obj: obj}
 	p := Object{o}
 	runtime.SetFinalizer(o, func(o *pyObject) {
-		C.Py_DecRef(o.obj)
+		// TODO: need better auto-release mechanism
+		// C.Py_DecRef(o.obj)
 	})
 	return p
 }
 
 func (obj Object) Dir() List {
 	return obj.Call("__dir__").AsList()
+}
+
+func (obj Object) Equals(other Objecter) bool {
+	return C.PyObject_RichCompareBool(obj.obj, other.Obj(), C.Py_EQ) != 0
 }
 
 func (obj Object) Attr(name string) Object {

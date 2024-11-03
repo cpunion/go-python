@@ -5,6 +5,7 @@ import (
 )
 
 func TestMakeList(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		args     []any
@@ -32,24 +33,23 @@ func TestMakeList(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			list := MakeList(tt.args...)
+		list := MakeList(tt.args...)
 
-			if got := list.Len(); got != tt.wantLen {
-				t.Errorf("MakeList() len = %v, want %v", got, tt.wantLen)
-			}
+		if got := list.Len(); got != tt.wantLen {
+			t.Errorf("MakeList() len = %v, want %v", got, tt.wantLen)
+		}
 
-			for i, want := range tt.wantVals {
-				got := list.GetItem(i).String()
-				if got != From(want).String() {
-					t.Errorf("MakeList() item[%d] = %v, want %v", i, got, want)
-				}
+		for i, want := range tt.wantVals {
+			got := list.GetItem(i).String()
+			if got != From(want).String() {
+				t.Errorf("MakeList() item[%d] = %v, want %v", i, got, want)
 			}
-		})
+		}
 	}
 }
 
 func TestList_SetItem(t *testing.T) {
+	setupTest(t)
 	list := MakeList(1, 2, 3)
 	list.SetItem(1, From("test"))
 
@@ -62,6 +62,7 @@ func TestList_SetItem(t *testing.T) {
 }
 
 func TestList_Append(t *testing.T) {
+	setupTest(t)
 	list := MakeList(1, 2)
 	initialLen := list.Len()
 
@@ -77,6 +78,7 @@ func TestList_Append(t *testing.T) {
 }
 
 func TestList_Len(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name string
 		args []any
@@ -88,11 +90,9 @@ func TestList_Len(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			list := MakeList(tt.args...)
-			if got := list.Len(); got != tt.want {
-				t.Errorf("List.Len() = %v, want %v", got, tt.want)
-			}
-		})
+		list := MakeList(tt.args...)
+		if got := list.Len(); got != tt.want {
+			t.Errorf("List.Len() = %v, want %v", got, tt.want)
+		}
 	}
 }

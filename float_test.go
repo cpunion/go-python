@@ -5,7 +5,8 @@ import (
 )
 
 func TestFloat(t *testing.T) {
-	t.Run("MakeFloat and conversions", func(t *testing.T) {
+	setupTest(t)
+	func() {
 		// Test creating float and converting back
 		f := MakeFloat(3.14159)
 
@@ -18,9 +19,9 @@ func TestFloat(t *testing.T) {
 		if got := f.Float32(); float64(got) != float64(float32(3.14159)) {
 			t.Errorf("Float32() = %v, want %v", got, float32(3.14159))
 		}
-	})
+	}()
 
-	t.Run("IsInteger", func(t *testing.T) {
+	func() {
 		// Test integer float
 		intFloat := MakeFloat(5.0)
 
@@ -34,9 +35,9 @@ func TestFloat(t *testing.T) {
 		if fracFloat.IsInteger().Bool() {
 			t.Errorf("IsInteger() for 5.5 = true, want false")
 		}
-	})
+	}()
 
-	t.Run("Zero and special values", func(t *testing.T) {
+	func() {
 		// Test zero
 		zero := MakeFloat(0.0)
 
@@ -50,5 +51,5 @@ func TestFloat(t *testing.T) {
 		if got := large.Float64(); got != 1e308 {
 			t.Errorf("Float64() = %v, want 1e308", got)
 		}
-	})
+	}()
 }

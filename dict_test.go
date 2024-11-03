@@ -5,8 +5,9 @@ import (
 )
 
 func TestDictFromPairs(t *testing.T) {
+	setupTest(t)
 	// Add panic test case
-	t.Run("odd number of arguments", func(t *testing.T) {
+	func() {
 		defer func() {
 			if r := recover(); r == nil {
 				t.Errorf("DictFromPairs() with odd number of arguments should panic")
@@ -16,7 +17,7 @@ func TestDictFromPairs(t *testing.T) {
 		}()
 
 		DictFromPairs("key1", "value1", "key2") // Should panic
-	})
+	}()
 
 	tests := []struct {
 		name     string
@@ -39,23 +40,22 @@ func TestDictFromPairs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dict := DictFromPairs(tt.pairs...)
+		dict := DictFromPairs(tt.pairs...)
 
-			// Verify each key-value pair
-			for i := 0; i < len(tt.wantKeys); i++ {
-				key := From(tt.wantKeys[i])
-				val := dict.Get(key)
-				if !ObjectsAreEqual(val, From(tt.wantVals[i])) {
-					t.Errorf("DictFromPairs() got value %v for key %v, want %v",
-						val, tt.wantKeys[i], tt.wantVals[i])
-				}
+		// Verify each key-value pair
+		for i := 0; i < len(tt.wantKeys); i++ {
+			key := From(tt.wantKeys[i])
+			val := dict.Get(key)
+			if !ObjectsAreEqual(val, From(tt.wantVals[i])) {
+				t.Errorf("DictFromPairs() got value %v for key %v, want %v",
+					val, tt.wantKeys[i], tt.wantVals[i])
 			}
-		})
+		}
 	}
 }
 
 func TestMakeDict(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name string
 		m    map[any]any
@@ -78,22 +78,21 @@ func TestMakeDict(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dict := MakeDict(tt.m)
+		dict := MakeDict(tt.m)
 
-			// Verify each key-value pair
-			for k, v := range tt.m {
-				key := From(k)
-				got := dict.Get(key)
-				if !ObjectsAreEqual(got, From(v)) {
-					t.Errorf("MakeDict() got value %v for key %v, want %v", got, k, v)
-				}
+		// Verify each key-value pair
+		for k, v := range tt.m {
+			key := From(k)
+			got := dict.Get(key)
+			if !ObjectsAreEqual(got, From(v)) {
+				t.Errorf("MakeDict() got value %v for key %v, want %v", got, k, v)
 			}
-		})
+		}
 	}
 }
 
 func TestDictSetGet(t *testing.T) {
+	setupTest(t)
 	dict := DictFromPairs()
 
 	// Test Set and Get
@@ -108,6 +107,7 @@ func TestDictSetGet(t *testing.T) {
 }
 
 func TestDictSetGetString(t *testing.T) {
+	setupTest(t)
 	dict := DictFromPairs()
 
 	// Test SetString and GetString
@@ -121,6 +121,7 @@ func TestDictSetGetString(t *testing.T) {
 }
 
 func TestDictDel(t *testing.T) {
+	setupTest(t)
 	dict := DictFromPairs("test_key", "test_value")
 	key := From("test_key")
 
@@ -141,6 +142,7 @@ func TestDictDel(t *testing.T) {
 }
 
 func TestDictForEach(t *testing.T) {
+	setupTest(t)
 	dict := DictFromPairs(
 		"key1", "value1",
 		"key2", "value2",

@@ -5,6 +5,7 @@ import (
 )
 
 func TestComplex(t *testing.T) {
+	setupTest(t)
 	tests := []struct {
 		name     string
 		input    complex128
@@ -38,28 +39,27 @@ func TestComplex(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := MakeComplex(tt.input)
+		c := MakeComplex(tt.input)
 
-			// Test Real() method
-			if got := c.Real(); got != tt.wantReal {
-				t.Errorf("Complex.Real() = %v, want %v", got, tt.wantReal)
-			}
+		// Test Real() method
+		if got := c.Real(); got != tt.wantReal {
+			t.Errorf("Complex.Real() = %v, want %v", got, tt.wantReal)
+		}
 
-			// Test Imag() method
-			if got := c.Imag(); got != tt.wantImag {
-				t.Errorf("Complex.Imag() = %v, want %v", got, tt.wantImag)
-			}
+		// Test Imag() method
+		if got := c.Imag(); got != tt.wantImag {
+			t.Errorf("Complex.Imag() = %v, want %v", got, tt.wantImag)
+		}
 
-			// Test Complex128() method
-			if got := c.Complex128(); got != tt.input {
-				t.Errorf("Complex.Complex128() = %v, want %v", got, tt.input)
-			}
-		})
+		// Test Complex128() method
+		if got := c.Complex128(); got != tt.input {
+			t.Errorf("Complex.Complex128() = %v, want %v", got, tt.input)
+		}
 	}
 }
 
 func TestComplexZeroValue(t *testing.T) {
+	setupTest(t)
 	// Create a proper zero complex number instead of using zero-value struct
 	c := MakeComplex(complex(0, 0))
 
@@ -76,6 +76,7 @@ func TestComplexZeroValue(t *testing.T) {
 }
 
 func TestComplexNilHandling(t *testing.T) {
+	setupTest(t)
 	var c Complex // zero-value struct with nil pointer
 	defer func() {
 		if r := recover(); r == nil {

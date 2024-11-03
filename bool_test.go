@@ -5,6 +5,7 @@ import (
 )
 
 func TestBool(t *testing.T) {
+	setupTest(t)
 	// Test MakeBool
 	b1 := MakeBool(true)
 	if !b1.Bool() {
