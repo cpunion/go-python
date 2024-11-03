@@ -5,6 +5,8 @@ package gp
 */
 import "C"
 
+// Float represents a Python float object. It provides methods to convert between
+// Go float types and Python float objects, as well as checking numeric properties.
 type Float struct {
 	Object
 }
@@ -19,6 +21,10 @@ func MakeFloat(f float64) Float {
 
 func (f Float) Float64() float64 {
 	return float64(C.PyFloat_AsDouble(f.obj))
+}
+
+func (f Float) Float32() float32 {
+	return float32(C.PyFloat_AsDouble(f.obj))
 }
 
 func (f Float) IsInteger() Bool {
