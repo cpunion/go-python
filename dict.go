@@ -40,6 +40,11 @@ func MakeDict(m map[any]any) Dict {
 	return dict
 }
 
+func (d Dict) Has(key any) bool {
+	keyObj := From(key)
+	return C.PyDict_Contains(d.obj, keyObj.obj) != 0
+}
+
 func (d Dict) Get(key Objecter) Object {
 	v := C.PyDict_GetItem(d.obj, key.Obj())
 	C.Py_IncRef(v)
