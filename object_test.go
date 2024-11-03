@@ -6,9 +6,6 @@ import (
 )
 
 func TestObjectCreation(t *testing.T) {
-	Initialize()
-	defer Finalize()
-
 	// Test From() with different Go types
 	tests := []struct {
 		name     string
@@ -60,9 +57,6 @@ func TestObjectCreation(t *testing.T) {
 }
 
 func TestObjectAttributes(t *testing.T) {
-	Initialize()
-	defer Finalize()
-
 	// Test attributes using Python's built-in object type
 	builtins := ImportModule("builtins")
 	obj := builtins.AttrFunc("object").Call()
@@ -107,9 +101,6 @@ class TestClass:
 }
 
 func TestDictOperations(t *testing.T) {
-	Initialize()
-	defer Finalize()
-
 	// Test dictionary operations
 	pyDict := MakeDict(nil)
 	pyDict.Set(MakeStr("key1"), From(42))
@@ -132,9 +123,6 @@ func TestDictOperations(t *testing.T) {
 }
 
 func TestObjectConversion(t *testing.T) {
-	Initialize()
-	defer Finalize()
-
 	type Person struct {
 		Name string
 		Age  int
@@ -176,9 +164,6 @@ func TestObjectConversion(t *testing.T) {
 }
 
 func TestObjectString(t *testing.T) {
-	Initialize()
-	defer Finalize()
-
 	tests := []struct {
 		name     string
 		input    interface{}

@@ -31,3 +31,7 @@ func False() Bool {
 func (b Bool) Bool() bool {
 	return C.PyObject_IsTrue(b.obj) != 0
 }
+
+func (b Bool) Not() Bool {
+	return MakeBool(!b.Bool())
+}

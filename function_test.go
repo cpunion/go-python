@@ -35,9 +35,6 @@ func (t *TestStruct) TestMethod() int {
 }
 
 func TestAddType(t *testing.T) {
-	Initialize()
-	defer Finalize()
-
 	m := MainModule()
 
 	// test add type
@@ -124,9 +121,6 @@ func (i *InitTestStruct) Init(val int) {
 }
 
 func TestAddTypeWithInit(t *testing.T) {
-	Initialize()
-	defer Finalize()
-
 	m := MainModule()
 
 	typ := AddType[InitTestStruct](m, (*InitTestStruct).Init, "InitTestStruct", "Test init struct")
