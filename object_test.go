@@ -184,3 +184,330 @@ func TestObjectString(t *testing.T) {
 		})
 	}
 }
+
+func TestPyObjectMethods(t *testing.T) {
+	// Test pyObject.Obj()
+	t.Run("pyObject.Obj", func(t *testing.T) {
+		obj := From(42)
+		if obj.pyObject.Obj() == nil {
+			t.Error("pyObject.Obj() returned nil for valid object")
+		}
+
+		var nilObj *pyObject
+		if nilObj.Obj() != nil {
+			t.Error("pyObject.Obj() should return nil for nil object")
+		}
+	})
+
+	// Test pyObject.Ensure()
+	t.Run("pyObject.Ensure", func(t *testing.T) {
+		obj := From(42)
+		obj.Ensure() // Should not panic
+
+		var nilObj Object
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("Ensure() should panic for nil object")
+			}
+		}()
+		nilObj.Ensure()
+	})
+}
+
+func TestObjectMethods(t *testing.T) {
+	// Test Object.object()
+	t.Run("Object.object", func(t *testing.T) {
+		obj := From(42)
+		if obj.object() != obj {
+			t.Error("object() should return the same object")
+		}
+	})
+
+	// Test Object.Attr* methods
+	t.Run("Object.Attr methods", func(t *testing.T) {
+		// Create a test class with various attribute types
+		pyCode := `
+class TestClass:
+    def __init__(self):
+        self.int_val = 42
+        self.float_val = 3.14
+        self.str_val = "test"
+        self.bool_val = True
+        self.list_val = [1, 2, 3]
+        self.dict_val = {"key": "value"}
+        self.tuple_val = (1, 2, 3)
+`
+		locals := MakeDict(nil)
+		globals := MakeDict(nil)
+		builtins := ImportModule("builtins")
+		globals.Set(MakeStr("__builtins__"), builtins.Object)
+
+		code := CompileString(pyCode, "<string>", FileInput)
+		EvalCode(code, globals, locals)
+
+		testClass := locals.Get(MakeStr("TestClass")).AsFunc()
+		instance := testClass.Call()
+
+		// Test each Attr* method
+		if instance.AttrLong("int_val").Int64() != 42 {
+			t.Error("AttrLong failed")
+		}
+		if instance.AttrFloat("float_val").Float64() != 3.14 {
+			t.Error("AttrFloat failed")
+		}
+		if instance.AttrString("str_val").String() != "test" {
+			t.Error("AttrString failed")
+		}
+		if !instance.AttrBool("bool_val").Bool() {
+			t.Error("AttrBool failed")
+		}
+		if instance.AttrList("list_val").Len() != 3 {
+			t.Error("AttrList failed")
+		}
+		if instance.AttrDict("dict_val").Get(MakeStr("key")).AsStr().String() != "value" {
+			t.Error("AttrDict failed")
+		}
+		if instance.AttrTuple("tuple_val").Len() != 3 {
+			t.Error("AttrTuple failed")
+		}
+	})
+
+	// Test Object.IsTuple and AsTuple
+	t.Run("Tuple operations", func(t *testing.T) {
+		// Create a Python tuple using Python code to ensure proper tuple creation
+		pyCode := `
+def make_tuple():
+    return (1, 2, 3)
+`
+		locals := MakeDict(nil)
+		globals := MakeDict(nil)
+		builtins := ImportModule("builtins")
+		globals.Set(MakeStr("__builtins__"), builtins.Object)
+
+		code := CompileString(pyCode, "<string>", FileInput)
+		EvalCode(code, globals, locals)
+
+		makeTuple := locals.Get(MakeStr("make_tuple")).AsFunc()
+		tuple := makeTuple.Call()
+
+		// Test IsTuple
+		if !tuple.IsTuple() {
+			t.Error("IsTuple failed to identify tuple")
+		}
+
+		// Test AsTuple
+		pythonTuple := tuple.AsTuple()
+		if pythonTuple.Len() != 3 {
+			t.Error("AsTuple conversion failed")
+		}
+
+		// Verify tuple contents
+		if pythonTuple.Get(0).AsLong().Int64() != 1 {
+			t.Error("Incorrect value at index 0")
+		}
+		if pythonTuple.Get(1).AsLong().Int64() != 2 {
+			t.Error("Incorrect value at index 1")
+		}
+		if pythonTuple.Get(2).AsLong().Int64() != 3 {
+			t.Error("Incorrect value at index 2")
+		}
+	})
+
+	// Test Object.Repr and Type
+	t.Run("Repr and Type", func(t *testing.T) {
+		obj := From(42)
+		if obj.Repr() != "42" {
+			t.Error("Repr failed")
+		}
+
+		typeObj := obj.Type()
+		if typeObj.Repr() != "<class 'int'>" {
+			t.Error("Type failed")
+		}
+	})
+
+	// Test From with various numeric types
+	t.Run("From numeric types", func(t *testing.T) {
+		tests := []struct {
+			input    interface{}
+			expected int64
+		}{
+			{int8(42), 42},
+			{int16(42), 42},
+			{int32(42), 42},
+			{int64(42), 42},
+			{uint8(42), 42},
+			{uint16(42), 42},
+			{uint32(42), 42},
+			{uint64(42), 42},
+		}
+
+		for _, tt := range tests {
+			obj := From(tt.input)
+			if obj.AsLong().Int64() != tt.expected {
+				t.Errorf("From(%T) = %v, want %v", tt.input, obj.AsLong().Int64(), tt.expected)
+			}
+		}
+	})
+
+	// Test From with false boolean
+	t.Run("From false", func(t *testing.T) {
+		obj := From(false)
+		if obj.AsBool().Bool() != false {
+			t.Error("From(false) failed")
+		}
+	})
+
+	// Test Object.Obj()
+	t.Run("Object.Obj", func(t *testing.T) {
+		obj := From(42)
+		if obj.Obj() == nil {
+			t.Error("Object.Obj() returned nil for valid object")
+		}
+
+		var nilObj Object
+		if nilObj.Obj() != nil {
+			t.Error("Object.Obj() should return nil for nil object")
+		}
+	})
+}
+
+func TestToValue(t *testing.T) {
+	t.Run("Numeric types", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			pyValue  Object
+			goType   interface{}
+			expected interface{}
+		}{
+			{"int8", From(42), int8(0), int8(42)},
+			{"int16", From(42), int16(0), int16(42)},
+			{"int32", From(42), int32(0), int32(42)},
+			{"int64", From(42), int64(0), int64(42)},
+			{"int", From(42), int(0), int(42)},
+			{"uint8", From(42), uint8(0), uint8(42)},
+			{"uint16", From(42), uint16(0), uint16(42)},
+			{"uint32", From(42), uint32(0), uint32(42)},
+			{"uint64", From(42), uint64(0), uint64(42)},
+			{"uint", From(42), uint(0), uint(42)},
+			{"float32", From(3.14), float32(0), float32(3.14)},
+			{"float64", From(3.14), float64(0), float64(3.14)},
+			{"complex64", From(complex(1, 2)), complex64(0), complex64(complex(1, 2))},
+			{"complex128", From(complex(1, 2)), complex128(0), complex128(complex(1, 2))},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				v := reflect.New(reflect.TypeOf(tt.goType)).Elem()
+				if !ToValue(tt.pyValue, v) {
+					t.Errorf("ToValue failed for %v", tt.name)
+				}
+				if v.Interface() != tt.expected {
+					t.Errorf("Expected %v, got %v", tt.expected, v.Interface())
+				}
+			})
+		}
+	})
+
+	t.Run("String type", func(t *testing.T) {
+		v := reflect.New(reflect.TypeOf("")).Elem()
+		if !ToValue(From("hello"), v) {
+			t.Error("ToValue failed for string")
+		}
+		if v.String() != "hello" {
+			t.Errorf("Expected 'hello', got %v", v.String())
+		}
+	})
+
+	t.Run("Boolean type", func(t *testing.T) {
+		v := reflect.New(reflect.TypeOf(true)).Elem()
+		if !ToValue(From(true), v) {
+			t.Error("ToValue failed for bool")
+		}
+		if !v.Bool() {
+			t.Error("Expected true, got false")
+		}
+	})
+
+	t.Run("Bytes type", func(t *testing.T) {
+		expected := []byte("hello")
+		v := reflect.New(reflect.TypeOf([]byte{})).Elem()
+		if !ToValue(From(expected), v) {
+			t.Error("ToValue failed for []byte")
+		}
+		if !reflect.DeepEqual(v.Bytes(), expected) {
+			t.Errorf("Expected %v, got %v", expected, v.Bytes())
+		}
+	})
+
+	t.Run("Slice type", func(t *testing.T) {
+		expected := []int{1, 2, 3}
+		v := reflect.New(reflect.TypeOf([]int{})).Elem()
+		if !ToValue(From(expected), v) {
+			t.Error("ToValue failed for slice")
+		}
+		if !reflect.DeepEqual(v.Interface(), expected) {
+			t.Errorf("Expected %v, got %v", expected, v.Interface())
+		}
+	})
+
+	t.Run("Map type", func(t *testing.T) {
+		expected := map[string]int{"one": 1, "two": 2}
+		v := reflect.New(reflect.TypeOf(map[string]int{})).Elem()
+		if !ToValue(From(expected), v) {
+			t.Error("ToValue failed for map")
+		}
+		if !reflect.DeepEqual(v.Interface(), expected) {
+			t.Errorf("Expected %v, got %v", expected, v.Interface())
+		}
+	})
+
+	t.Run("Struct type", func(t *testing.T) {
+		type TestStruct struct {
+			Name string
+			Age  int
+		}
+		expected := TestStruct{Name: "Alice", Age: 30}
+		v := reflect.New(reflect.TypeOf(TestStruct{})).Elem()
+		if !ToValue(From(expected), v) {
+			t.Error("ToValue failed for struct")
+		}
+		if !reflect.DeepEqual(v.Interface(), expected) {
+			t.Errorf("Expected %v, got %v", expected, v.Interface())
+		}
+	})
+
+	t.Run("Invalid conversions", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			pyValue Object
+			goType  interface{}
+		}{
+			{"string to int", From("not a number"), int(0)},
+			{"int to bool", From(42), true},
+			{"float to string", From(3.14), ""},
+			{"list to map", From([]int{1, 2, 3}), map[string]int{}},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				v := reflect.New(reflect.TypeOf(tt.goType)).Elem()
+				if ToValue(tt.pyValue, v) {
+					t.Errorf("ToValue should have failed for %v", tt.name)
+				}
+			})
+		}
+	})
+
+	t.Run("Nil and invalid values", func(t *testing.T) {
+		var nilValue reflect.Value
+		if ToValue(From(42), nilValue) {
+			t.Error("ToValue should fail for nil reflect.Value")
+		}
+
+		v := reflect.ValueOf(42) // not settable
+		if ToValue(From(43), v) {
+			t.Error("ToValue should fail for non-settable value")
+		}
+	})
+}
