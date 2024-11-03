@@ -17,10 +17,6 @@ func newDict(obj *PyObject) Dict {
 	return Dict{newObject(obj)}
 }
 
-func NewDict(obj *PyObject) Dict {
-	return newDict(obj)
-}
-
 func DictFromPairs(pairs ...any) Dict {
 	if len(pairs)%2 != 0 {
 		panic("DictFromPairs requires an even number of arguments")
