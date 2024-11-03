@@ -52,12 +52,12 @@ func (obj Object) object() Object {
 
 func newObject(obj *PyObject) Object {
 	if obj == nil {
-		C.PyErr_Print()
 		return Object{}
 	}
 	o := &pyObject{obj: obj}
 	p := Object{o}
 	runtime.SetFinalizer(o, func(o *pyObject) {
+		// TODO: need better auto-release mechanism
 		// C.Py_DecRef(o.obj)
 	})
 	return p
