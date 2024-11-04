@@ -29,7 +29,11 @@ for i in range(10):
 
 	mod := gp.ImportModule("__main__")
 	gbl := mod.Dict()
-	code := gp.CompileString(pythonCode, "<string>", gp.FileInput)
+	code, err := gp.CompileString(pythonCode, "<string>", gp.FileInput)
+	if err != nil {
+		fmt.Printf("Failed to compile Python code: %v\n", err)
+		return
+	}
 	_ = gp.EvalCode(code, gbl, gp.Nil().AsDict())
 	for i := 0; i < 10; i++ {
 		result := gp.EvalCode(code, gbl, gp.Nil().AsDict())
@@ -49,12 +53,9 @@ for i in range(10):
 		runtime.GC()
 	}
 
-	for i := 1; i <= 100000; i++ {
-		println(i)
+	for i := 1; i <= 1000000; i++ {
 		f := gp.MakeFloat(float64(i))
-		r := pymath.Sqrt(f)
-		b := r.IsInteger()
-		var _ bool = b.Bool()
+		_ = pymath.Sqrt(f)
 		if i%10000 == 0 {
 			fmt.Printf("Iteration %d in go\n", i)
 		}

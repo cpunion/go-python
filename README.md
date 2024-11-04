@@ -35,12 +35,12 @@
 
 ## Examples
 
-See the [examples](_demo).
+See the [examples](demo).
 
 ### Hello World: Plot a line
 
 ```go
-// _demo/plot/plot.go
+// demo/plot/plot.go
 
 package main
 
@@ -58,7 +58,7 @@ func main() {
 ### Typed Python Objects
 
 ```go
-// _demo/plot2/plot2.go
+// demo/plot2/plot2.go
 
 package main
 
@@ -93,7 +93,7 @@ func main() {
 ### Define Python Objects with Go
 
 ```go
-// _demo/module/foo/foo.go
+// demo/module/foo/foo.go
 
 package foo
 
@@ -145,7 +145,7 @@ func InitFooModule() gp.Module {
 Call foo module from Python and Go.
 
 ```go
-// _demo/module/module.go
+// demo/module/module.go
 
 package main
 
@@ -153,7 +153,7 @@ import (
 	"fmt"
 
 	gp "github.com/cpunion/go-python"
-	"github.com/cpunion/go-python/_demo/module/foo"
+	"github.com/cpunion/go-python/demo/module/foo"
 )
 
 func main() {
@@ -214,7 +214,7 @@ point.print()
 ### Call gradio
 
 ```go
-// _demo/gradio/gradio.go
+// demo/gradio/gradio.go
 
 package main
 
@@ -265,6 +265,7 @@ func main() {
 	}
 
 	gp.Initialize()
+	defer gp.Finalize()
 	gr = gp.ImportModule("gradio")
 	fn := gp.CreateFunc(UpdateExamples,
 		"(country, /)\n--\n\nUpdate examples based on country")
