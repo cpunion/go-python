@@ -82,7 +82,10 @@ class TestClass:
 	globals := MakeDict(nil)
 	globals.Set(MakeStr("__builtins__"), builtins.Object)
 
-	code := CompileString(pyCode, "<string>", FileInput)
+	code, err := CompileString(pyCode, "<string>", FileInput)
+	if err != nil {
+		t.Errorf("CompileString() error = %v", err)
+	}
 
 	EvalCode(code, globals, locals).AsModule()
 	testClass := locals.Get(MakeStr("TestClass")).AsFunc()
@@ -237,7 +240,10 @@ class TestClass:
 	builtins := ImportModule("builtins")
 	globals.Set(MakeStr("__builtins__"), builtins.Object)
 
-	code := CompileString(pyCode, "<string>", FileInput)
+	code, err := CompileString(pyCode, "<string>", FileInput)
+	if err != nil {
+		t.Errorf("CompileString() error = %v", err)
+	}
 	EvalCode(code, globals, locals)
 
 	testClass := locals.Get(MakeStr("TestClass")).AsFunc()
@@ -278,7 +284,10 @@ def make_tuple():
 		builtins := ImportModule("builtins")
 		globals.Set(MakeStr("__builtins__"), builtins.Object)
 
-		code := CompileString(pyCode, "<string>", FileInput)
+		code, err := CompileString(pyCode, "<string>", FileInput)
+		if err != nil {
+			t.Errorf("CompileString() error = %v", err)
+		}
 		EvalCode(code, globals, locals)
 
 		makeTuple := locals.Get(MakeStr("make_tuple")).AsFunc()

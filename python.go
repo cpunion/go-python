@@ -36,14 +36,21 @@ const (
 	EvalInput   InputType = C.Py_eval_input
 )
 
-func CompileString(code, filename string, start InputType) Object {
+func CompileString(code, filename string, start InputType) (Object, error) {
 	ccode := AllocCStr(code)
 	cfilename := AllocCStr(filename)
 	o := C.Py_CompileString(ccode, cfilename, C.int(start))
 	// TODO: check why double free
 	C.free(unsafe.Pointer(ccode))
 	C.free(unsafe.Pointer(cfilename))
-	return newObject(o)
+	if o == nil {
+		err := FetchError()
+		if err != nil {
+			return Object{}, err
+		}
+		return Object{}, fmt.Errorf("failed to compile code")
+	}
+	return newObject(o), nil
 }
 
 func EvalCode(code Object, globals, locals Dict) Object {
@@ -91,9 +98,9 @@ func RunString(code string) error {
 	dict := main.Dict()
 
 	// Run the code string
-	codeObj := CompileString(code, "<string>", FileInput)
-	if codeObj.Nil() {
-		return fmt.Errorf("failed to compile code")
+	codeObj, err := CompileString(code, "<string>", FileInput)
+	if err != nil {
+		return err
 	}
 
 	ret := EvalCode(codeObj, dict, dict)

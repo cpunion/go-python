@@ -71,7 +71,7 @@ func TestCompileString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		obj := CompileString(tt.code, tt.filename, tt.start)
+		obj, _ := CompileString(tt.code, tt.filename, tt.start)
 		if obj.Nil() != tt.wantNil {
 			t.Errorf("CompileString() returned nil = %v, want %v", obj.Nil(), tt.wantNil)
 		}

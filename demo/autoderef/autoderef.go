@@ -29,7 +29,11 @@ for i in range(10):
 
 	mod := gp.ImportModule("__main__")
 	gbl := mod.Dict()
-	code := gp.CompileString(pythonCode, "<string>", gp.FileInput)
+	code, err := gp.CompileString(pythonCode, "<string>", gp.FileInput)
+	if err != nil {
+		fmt.Printf("Failed to compile Python code: %v\n", err)
+		return
+	}
 	_ = gp.EvalCode(code, gbl, gp.Nil().AsDict())
 	for i := 0; i < 10; i++ {
 		result := gp.EvalCode(code, gbl, gp.Nil().AsDict())
