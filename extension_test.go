@@ -156,3 +156,139 @@ except TypeError:
 		t.Fatalf("Test failed: %v", err)
 	}
 }
+
+func TestCreateFunc(t *testing.T) {
+	setupTest(t)
+
+	// Test simple function
+	simpleFunc := func(x int) int {
+		return x * 2
+	}
+	f1 := CreateFunc("simple_func", simpleFunc, "Doubles the input value")
+	if f1.Nil() {
+		t.Fatal("Failed to create simple function")
+	}
+
+	// Test function with multiple arguments and return values
+	multiFunc := func(x int, y string) (int, string) {
+		return x * 2, y + y
+	}
+	f2 := CreateFunc("multi_func", multiFunc, "Returns doubled number and duplicated string")
+	if f2.Nil() {
+		t.Fatal("Failed to create function with multiple returns")
+	}
+
+	// Test the functions using Python code
+	code := `
+# Test simple function
+result = simple_func(21)
+assert result == 42, f"Expected 42, got {result}"
+
+# Test multiple return values
+num, text = multi_func(5, "hello")
+assert num == 10, f"Expected 10, got {num}"
+assert text == "hellohello", f"Expected 'hellohello', got {text}"
+
+# Test error handling - wrong argument type
+try:
+    simple_func("not a number")
+    assert False, "Should fail with wrong argument type"
+except TypeError:
+    pass
+
+# Test error handling - wrong number of arguments
+try:
+    simple_func(1, 2)
+    assert False, "Should fail with wrong number of arguments"
+except TypeError:
+    pass
+`
+
+	err := RunString(code)
+	if err != nil {
+		t.Fatalf("Test failed: %v", err)
+	}
+
+	// Test invalid function type
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("CreateFunc should panic with non-function argument")
+		}
+	}()
+	CreateFunc("non_func", 42, "This should panic")
+}
+
+func explicitFunc(x int) int {
+	return x + 1
+}
+
+func namedFunc(x string) string {
+	return "Hello " + x
+}
+
+func TestModuleAddMethod(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	// Test with explicit name
+	f1 := m.AddMethod("", explicitFunc, " - adds one to input")
+	if f1.Nil() {
+		t.Fatal("Failed to create function with explicit name")
+	}
+
+	// Test with empty name (should use function name)
+	f2 := m.AddMethod("", namedFunc, " - adds greeting")
+	if f2.Nil() {
+		t.Fatal("Failed to create function with derived name")
+	}
+
+	// Test with anonymous function (should generate name)
+	f3 := m.AddMethod("", func(x, y int) int {
+		return x * y
+	}, " - multiplies two numbers")
+	if f3.Nil() {
+		t.Fatal("Failed to create anonymous function")
+	}
+
+	code := `
+# Test explicit named function
+result = explicit_func(41)
+assert result == 42, f"Expected 42, got {result}"
+
+# Test function with derived name
+result = named_func("World")
+assert result == "Hello World", f"Expected 'Hello World', got {result}"
+
+# Test documentation
+import sys
+if sys.version_info >= (3, 2):
+    assert explicit_func.__doc__.strip() == "explicit_func - adds one to input"
+    assert named_func.__doc__.strip() == "named_func - adds greeting"
+
+# Test error cases
+try:
+    explicit_func("wrong type")
+    assert False, "Should fail with wrong argument type"
+except TypeError:
+    pass
+
+try:
+    explicit_func(1, 2)
+    assert False, "Should fail with wrong number of arguments"
+except TypeError:
+    pass
+`
+
+	err := RunString(code)
+	if err != nil {
+		t.Fatalf("Test failed: %v", err)
+	}
+
+	// Test invalid function type
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("AddMethod should panic with non-function argument")
+		}
+	}()
+	m.AddMethod("invalid", "not a function", "")
+}

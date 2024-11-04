@@ -24,9 +24,9 @@ import (
 	"unsafe"
 )
 
-func CreateFunc(fn any, doc string) Func {
+func CreateFunc(name string, fn any, doc string) Func {
 	m := MainModule()
-	return m.AddMethod("", fn, doc)
+	return m.AddMethod(name, fn, doc)
 }
 
 type wrapperType struct {
@@ -478,7 +478,6 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 	if t.Kind() != reflect.Func {
 		panic("AddFunction: fn must be a function")
 	}
-
 	if name == "" {
 		name = runtime.FuncForPC(v.Pointer()).Name()
 	}
@@ -489,7 +488,7 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 			name = name[idx+1:]
 		}
 	}
-
+	name = goNameToPythonName(name)
 	doc = name + doc
 
 	meta, ok := typeMetaMap[m.obj]
