@@ -117,7 +117,9 @@ func (obj Object) AttrFunc(name string) Func {
 
 func (obj Object) SetAttr(name string, value any) {
 	cname := AllocCStr(name)
-	C.PyObject_SetAttrString(obj.obj, cname, From(value).obj)
+	r := C.PyObject_SetAttrString(obj.obj, cname, From(value).obj)
+	C.PyErr_Print()
+	check(r == 0, fmt.Sprintf("failed to set attribute %s", name))
 	C.free(unsafe.Pointer(cname))
 }
 
@@ -294,38 +296,21 @@ func ToValue(obj Object, v reflect.Value) bool {
 	if !v.IsValid() || !v.CanSet() {
 		return false
 	}
+
 	switch v.Kind() {
-	case reflect.Int8:
-		fallthrough
-	case reflect.Int16:
-		fallthrough
-	case reflect.Int32:
-		fallthrough
-	case reflect.Int64:
-		fallthrough
-	case reflect.Int:
+	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
 		if obj.IsLong() {
 			v.SetInt(Cast[Long](obj).Int64())
 		} else {
 			return false
 		}
-	case reflect.Uint8:
-		fallthrough
-	case reflect.Uint16:
-		fallthrough
-	case reflect.Uint32:
-		fallthrough
-	case reflect.Uint64:
-		fallthrough
-	case reflect.Uint:
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
 		if obj.IsLong() {
 			v.SetUint(Cast[Long](obj).Uint64())
 		} else {
 			return false
 		}
-	case reflect.Float32:
-		fallthrough
-	case reflect.Float64:
+	case reflect.Float32, reflect.Float64:
 		if obj.IsFloat() || obj.IsLong() {
 			v.SetFloat(Cast[Float](obj).Float64())
 		} else {
@@ -405,62 +390,6 @@ func ToValue(obj Object, v reflect.Value) bool {
 		panic(fmt.Errorf("unsupported type conversion from Python object to %v", v.Type()))
 	}
 	return true
-}
-
-func To[T any](obj Object) (ret T) {
-	switch any(ret).(type) {
-	case int8:
-		return any(int8(Cast[Long](obj).Int64())).(T)
-	case int16:
-		return any(int16(Cast[Long](obj).Int64())).(T)
-	case int32:
-		return any(int32(Cast[Long](obj).Int64())).(T)
-	case int64:
-		return any(Cast[Long](obj).Int64()).(T)
-	case int:
-		return any(int(Cast[Long](obj).Int64())).(T)
-	case uint8:
-		return any(uint8(Cast[Long](obj).Uint64())).(T)
-	case uint16:
-		return any(uint16(Cast[Long](obj).Uint64())).(T)
-	case uint32:
-		return any(uint32(Cast[Long](obj).Uint64())).(T)
-	case uint64:
-		return any(Cast[Long](obj).Uint64()).(T)
-	case uint:
-		return any(uint(Cast[Long](obj).Uint64())).(T)
-	case float32:
-		return any(float32(Cast[Float](obj).Float64())).(T)
-	case float64:
-		return any(Cast[Float](obj).Float64()).(T)
-	case complex64:
-		return any(complex64(Cast[Complex](obj).Complex128())).(T)
-	case complex128:
-		return any(Cast[Complex](obj).Complex128()).(T)
-	case string:
-		return any(Cast[Str](obj).String()).(T)
-	case bool:
-		return any(Cast[Bool](obj).Bool()).(T)
-	case []byte:
-		return any(Cast[Bytes](obj).Bytes()).(T)
-	default:
-		v := reflect.ValueOf(ret)
-		switch v.Kind() {
-		case reflect.Slice:
-			return toSlice[T](obj, v)
-		}
-		panic(fmt.Errorf("unsupported type conversion from Python object to %T", ret))
-	}
-}
-
-func toSlice[T any](obj Object, v reflect.Value) T {
-	list := Cast[List](obj)
-	l := list.Len()
-	v = reflect.MakeSlice(v.Type(), l, l)
-	for i := 0; i < l; i++ {
-		v.Index(i).Set(reflect.ValueOf(To[T](list.GetItem(i))))
-	}
-	return v.Interface().(T)
 }
 
 func fromSlice(v reflect.Value) List {

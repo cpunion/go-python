@@ -74,7 +74,8 @@ func (f Func) Call(args ...any) Object {
 		for i, arg := range args {
 			obj := From(arg).Obj()
 			C.Py_IncRef(obj)
-			C.PyTuple_SetItem(argsTuple, C.Py_ssize_t(i), obj)
+			r := C.PyTuple_SetItem(argsTuple, C.Py_ssize_t(i), obj)
+			check(r == 0, fmt.Sprintf("failed to set item %d in tuple", i))
 		}
 		return newObject(C.PyObject_CallObject(f.obj, argsTuple))
 	}
@@ -471,9 +472,7 @@ func getMembers(t reflect.Type, methods map[uint]*slotMeta) (members *C.PyMember
 func AddType[T any](m Module, init any, name string, doc string) Object {
 	wrapper := wrapperType[T]{}
 	ty := reflect.TypeOf(wrapper.v)
-	if ty.Kind() != reflect.Struct {
-		panic("AddType: t must be a struct")
-	}
+	check(ty.Kind() == reflect.Struct, "AddType: t must be a struct")
 
 	meta := &typeMeta{
 		typ:     ty,
@@ -517,17 +516,13 @@ func AddType[T any](m Module, init any, name string, doc string) Object {
 	}
 
 	typeObj := C.PyType_FromSpec(spec)
-	if typeObj == nil {
-		panic(fmt.Sprintf("Failed to create type %s", name))
-	}
+	check(typeObj != nil, fmt.Sprintf("Failed to create type %s", name))
 
 	typeMetaMap[typeObj] = meta
 	pyTypeMap[ty] = typeObj
 
-	if C.PyModule_AddObject(m.obj, C.CString(name), typeObj) < 0 {
-		C.Py_DecRef(typeObj)
-		panic(fmt.Sprintf("Failed to add type %s to module", name))
-	}
+	r := C.PyModule_AddObjectRef(m.obj, C.CString(name), typeObj)
+	check(r == 0, fmt.Sprintf("Failed to add type %s to module", name))
 
 	return newObject(typeObj)
 }
@@ -535,9 +530,7 @@ func AddType[T any](m Module, init any, name string, doc string) Object {
 func (m Module) AddMethod(name string, fn any, doc string) Func {
 	v := reflect.ValueOf(fn)
 	t := v.Type()
-	if t.Kind() != reflect.Func {
-		panic("AddFunction: fn must be a function")
-	}
+	check(t.Kind() == reflect.Func, "AddFunction: fn must be a function")
 
 	if name == "" {
 		name = runtime.FuncForPC(v.Pointer()).Name()
@@ -583,14 +576,10 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 	}
 
 	pyFunc := C.PyCFunction_New(def, m.obj)
-	if pyFunc == nil {
-		panic(fmt.Sprintf("Failed to create function %s", name))
-	}
+	check(pyFunc != nil, fmt.Sprintf("Failed to create function %s", name))
 
-	if C.PyModule_AddObject(m.obj, cName, pyFunc) < 0 {
-		C.Py_DecRef(pyFunc)
-		panic(fmt.Sprintf("Failed to add function %s to module", name))
-	}
+	r := C.PyModule_AddObjectRef(m.obj, cName, pyFunc)
+	check(r == 0, fmt.Sprintf("Failed to add function %s to module", name))
 
 	return newFunc(pyFunc)
 }

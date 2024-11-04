@@ -21,7 +21,8 @@ func Initialize() {
 }
 
 func Finalize() {
-	C.Py_FinalizeEx()
+	r := C.Py_FinalizeEx()
+	check(r == 0, "failed to finalize Python")
 	typeMetaMap = make(map[*C.PyObject]*typeMeta)
 	pyTypeMap = make(map[reflect.Type]*C.PyObject)
 }
@@ -111,4 +112,12 @@ func RunString(code string) error {
 		return fmt.Errorf("failed to execute code")
 	}
 	return nil
+}
+
+// ----------------------------------------------------------------------------
+
+func check(b bool, msg string) {
+	if !b {
+		panic(msg)
+	}
 }

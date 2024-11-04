@@ -1,6 +1,7 @@
 package gp
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 )
@@ -377,6 +378,56 @@ def make_tuple():
 			t.Error("Object.Obj() should return nil for nil object")
 		}
 	}()
+
+	func() {
+		// Test AttrBytes
+		builtins := ImportModule("types")
+		objType := builtins.AttrFunc("SimpleNamespace")
+		obj := objType.Call()
+
+		// Create a simple object with bytes attribute
+		obj.SetAttr("bytes_val", From([]byte("hello")))
+
+		if !bytes.Equal(obj.AttrBytes("bytes_val").Bytes(), []byte("hello")) {
+			t.Error("AttrBytes failed")
+		}
+	}()
+
+	func() {
+		// Test Object.Call with kwargs
+		pyCode := `
+def test_func(a, b=10, c="default"):
+    return (a, b, c)
+`
+		locals := MakeDict(nil)
+		globals := MakeDict(nil)
+		globals.Set(MakeStr("__builtins__"), builtins.Object)
+
+		code, err := CompileString(pyCode, "<string>", FileInput)
+		if err != nil {
+			t.Errorf("CompileString() error = %v", err)
+		}
+		EvalCode(code, globals, locals)
+
+		testFunc := locals.Get(MakeStr("test_func"))
+
+		// Call with positional and keyword arguments
+		result := testFunc.Call("__call__", 1, KwArgs{
+			"b": 20,
+			"c": "custom",
+		})
+
+		tuple := result.AsTuple()
+		if tuple.Get(0).AsLong().Int64() != 1 {
+			t.Error("Wrong value for first argument")
+		}
+		if tuple.Get(1).AsLong().Int64() != 20 {
+			t.Error("Wrong value for keyword argument b")
+		}
+		if tuple.Get(2).AsStr().String() != "custom" {
+			t.Error("Wrong value for keyword argument c")
+		}
+	}()
 }
 
 func TestToValue(t *testing.T) {
@@ -514,6 +565,51 @@ func TestToValue(t *testing.T) {
 		v := reflect.ValueOf(42) // not settable
 		if ToValue(From(43), v) {
 			t.Error("ToValue should fail for non-settable value")
+		}
+	}()
+}
+
+func TestFromSpecialCases(t *testing.T) {
+	setupTest(t)
+
+	func() {
+		// Test From with uint values
+		tests := []struct {
+			input    uint
+			expected uint64
+		}{
+			{0, 0},
+			{42, 42},
+			{^uint(0), ^uint64(0)}, // maximum uint value
+		}
+
+		for _, tt := range tests {
+			obj := From(tt.input)
+			if !obj.IsLong() {
+				t.Errorf("From(uint) did not create Long object")
+			}
+			if got := obj.AsLong().Uint64(); got != tt.expected {
+				t.Errorf("From(%d) = %d, want %d", tt.input, got, tt.expected)
+			}
+		}
+	}()
+
+	func() {
+		// Test From with Object.Obj()
+		original := From(42)
+		obj := From(original.Obj())
+
+		if !obj.IsLong() {
+			t.Error("From(Object.Obj()) did not create Long object")
+		}
+		if got := obj.AsLong().Int64(); got != 42 {
+			t.Errorf("From(Object.Obj()) = %d, want 42", got)
+		}
+
+		// Test that the new object is independent
+		original = From(100)
+		if got := obj.AsLong().Int64(); got != 42 {
+			t.Errorf("Object was not independent, got %d after modifying original", got)
 		}
 	}()
 }

@@ -32,7 +32,7 @@ func (s Str) Len() int {
 
 func (s Str) ByteLen() int {
 	var l C.long
-	C.PyUnicode_AsUTF8AndSize(s.obj, &l)
+	_ = C.PyUnicode_AsUTF8AndSize(s.obj, &l)
 	return int(l)
 }
 
