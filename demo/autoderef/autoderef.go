@@ -49,12 +49,9 @@ for i in range(10):
 		runtime.GC()
 	}
 
-	for i := 1; i <= 100000; i++ {
-		println(i)
+	for i := 1; i <= 1000000; i++ {
 		f := gp.MakeFloat(float64(i))
-		r := pymath.Sqrt(f)
-		b := r.IsInteger()
-		var _ bool = b.Bool()
+		_ = pymath.Sqrt(f)
 		if i%10000 == 0 {
 			fmt.Printf("Iteration %d in go\n", i)
 		}

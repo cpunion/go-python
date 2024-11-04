@@ -68,7 +68,7 @@ func With[T Objecter](obj T, fn func(v T)) T {
 // ----------------------------------------------------------------------------
 
 func MainModule() Module {
-	return GetModule("__main__")
+	return ImportModule("__main__")
 }
 
 func None() Object {

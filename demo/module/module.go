@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	gp "github.com/cpunion/go-python"
-	"github.com/cpunion/go-python/_demo/module/foo"
+	"github.com/cpunion/go-python/demo/module/foo"
 )
 
 func main() {

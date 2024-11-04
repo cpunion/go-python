@@ -47,6 +47,7 @@ func main() {
 	}
 
 	gp.Initialize()
+	defer gp.Finalize()
 	gr = gp.ImportModule("gradio")
 	fn := gp.CreateFunc(UpdateExamples,
 		"(country, /)\n--\n\nUpdate examples based on country")
