@@ -258,6 +258,8 @@ func From(v any) Object {
 		return newObject(C.PyLong_FromUnsignedLong(C.ulong(v)))
 	case float64:
 		return newObject(C.PyFloat_FromDouble(C.double(v)))
+	case float32:
+		return newObject(C.PyFloat_FromDouble(C.double(v)))
 	case string:
 		cstr := AllocCStr(v)
 		o := C.PyUnicode_FromString(cstr)
@@ -281,6 +283,16 @@ func From(v any) Object {
 		vv := reflect.ValueOf(v)
 		switch vv.Kind() {
 		case reflect.Ptr:
+			if vv.Elem().Type().Kind() == reflect.Struct {
+				maps := getCurrentThreadData()
+				if pyType, ok := maps.pyTypes[vv.Elem().Type()]; ok {
+					ptr := C._PyObject_New((*C.PyTypeObject)(unsafe.Pointer(pyType)))
+					wrapper := (*wrapperType)(unsafe.Pointer(ptr))
+					wrapper.goObj = vv.Interface()
+					wrapper.alloc = false
+					return newObject(ptr)
+				}
+			}
 			return From(vv.Elem().Interface())
 		case reflect.Slice:
 			return fromSlice(vv).Object
@@ -294,9 +306,8 @@ func From(v any) Object {
 }
 
 func ToValue(obj Object, v reflect.Value) bool {
-	// Handle nil pointer
 	if !v.IsValid() || !v.CanSet() {
-		return false
+		panic(fmt.Errorf("value is not valid or cannot be set: %v\n", v))
 	}
 
 	switch v.Kind() {
@@ -386,13 +397,13 @@ func ToValue(obj Object, v reflect.Value) bool {
 				}
 			}
 		} else {
-			tyMeta := typeMetaMap[obj.Type().Obj()]
+			maps := getCurrentThreadData()
+			tyMeta := maps.typeMetas[obj.Type().Obj()]
 			if tyMeta == nil {
 				return false
 			}
 			wrapper := (*wrapperType)(unsafe.Pointer(obj.Obj()))
-			vPtr := unsafe.Pointer(&wrapper.v)
-			v.Set(reflect.NewAt(tyMeta.typ, vPtr).Elem())
+			v.Set(reflect.ValueOf(wrapper.goObj).Elem())
 			return true
 		}
 	default:
@@ -404,8 +415,22 @@ func ToValue(obj Object, v reflect.Value) bool {
 func fromSlice(v reflect.Value) List {
 	l := v.Len()
 	list := newList(C.PyList_New(C.Py_ssize_t(l)))
-	for i := 0; i < l; i++ {
-		list.SetItem(i, From(v.Index(i).Interface()))
+	ty := v.Type().Elem()
+	maps := getCurrentThreadData()
+	pyType, ok := maps.pyTypes[ty]
+	if !ok {
+		for i := 0; i < l; i++ {
+			C.PyList_SetItem(list.obj, C.Py_ssize_t(i), From(v.Index(i).Interface()).obj)
+		}
+	} else {
+		for i := 0; i < l; i++ {
+			elem := v.Index(i)
+			elemAddr := elem.Addr()
+			wrapper := (*wrapperType)(unsafe.Pointer(C.PyType_GenericAlloc((*C.PyTypeObject)(unsafe.Pointer(pyType)), 0)))
+			wrapper.goObj = elemAddr.Interface()
+			wrapper.alloc = false
+			C.PyList_SetItem(list.obj, C.Py_ssize_t(i), (*C.PyObject)(unsafe.Pointer(wrapper)))
+		}
 	}
 	return list
 }
@@ -421,14 +446,15 @@ func fromMap(v reflect.Value) Dict {
 
 func fromStruct(v reflect.Value) Object {
 	ty := v.Type()
-	if typeObj, ok := pyTypeMap[ty]; ok {
-		obj := newObject(C._PyObject_New((*C.PyTypeObject)(unsafe.Pointer(typeObj))))
-		for i := 0; i < ty.NumField(); i++ {
-			field := ty.Field(i)
-			key := goNameToPythonName(field.Name)
-			obj.SetAttr(key, From(v.Field(i).Interface()))
-		}
-		return obj
+	maps := getCurrentThreadData()
+	if typeObj, ok := maps.pyTypes[ty]; ok {
+		ptr := C._PyObject_New((*C.PyTypeObject)(unsafe.Pointer(typeObj)))
+		wrapper := (*wrapperType)(unsafe.Pointer(ptr))
+		newPtr := reflect.New(ty)
+		newPtr.Elem().Set(v)
+		wrapper.goObj = newPtr.Interface()
+		wrapper.alloc = false
+		return newObject(ptr)
 	}
 	dict := newDict(C.PyDict_New())
 	for i := 0; i < ty.NumField(); i++ {
