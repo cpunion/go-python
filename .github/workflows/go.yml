@@ -51,6 +51,13 @@ jobs:
           - '1.23'
     runs-on: ${{matrix.os}}
     steps:
+      - name: Install Python 3.12 (macOS only)
+        run: brew install python@3.12
+        if: startsWith(matrix.os, 'macos')
+      - name: Set up Python 3.12 (Ubuntu only)
+        run: sudo apt-get install -y python3.12-dev
+        if: startsWith(matrix.os, 'ubuntu')
+      
       - uses: actions/checkout@v4
 
       - name: Set up Go
