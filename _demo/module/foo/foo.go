@@ -1,11 +1,5 @@
 package foo
 
-/*
-#cgo pkg-config: python3-embed
-#include <Python.h>
-*/
-import "C"
-
 import (
 	"fmt"
 
