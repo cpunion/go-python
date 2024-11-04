@@ -37,9 +37,11 @@
 
 See the [examples](_demo).
 
-### Hello World
+### Hello World: Plot a line
 
 ```go
+// _demo/plot/plot.go
+
 package main
 
 import gp "github.com/cpunion/go-python"
@@ -50,11 +52,14 @@ func main() {
 	plt.Call("plot", gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
 	plt.Call("show")
 }
+
 ```
 
 ### Typed Python Objects
 
 ```go
+// _demo/plot2/plot2.go
+
 package main
 
 import gp "github.com/cpunion/go-python"
@@ -79,16 +84,25 @@ func main() {
 	gp.Initialize()
 	defer gp.Finalize()
 	plt := Plt()
-	plt.Plot(gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
+	plt.Plot([]int{5, 10}, []int{10, 15}, gp.KwArgs{"color": "red"})
 	plt.Show()
 }
+
 ```
 
-### Define Python Objects
-
-See [autoderef/foo](_demo/autoderef/foo).
+### Define Python Objects with Go
 
 ```go
+// _demo/module/foo/foo.go
+
+package foo
+
+import (
+	"fmt"
+
+	gp "github.com/cpunion/go-python"
+)
+
 type Point struct {
 	X float64
 	Y float64
@@ -125,24 +139,59 @@ func InitFooModule() gp.Module {
 	gp.AddType[Point](m, (*Point).init, "Point", "Point objects")
 	return m
 }
+
 ```
 
 Call foo module from Python and Go.
 
 ```go
+// _demo/module/module.go
+
 package main
 
 import (
 	"fmt"
-	"runtime"
 
 	gp "github.com/cpunion/go-python"
-	"github.com/cpunion/go-python/_demo/autoderef/foo"
-	pymath "github.com/cpunion/go-python/math"
+	"github.com/cpunion/go-python/_demo/module/foo"
 )
 
-func Main1() {
-	gp.RunString(`
+func main() {
+	gp.Initialize()
+	defer gp.Finalize()
+	fooMod := foo.InitFooModule()
+	gp.GetModuleDict().SetString("foo", fooMod)
+
+	Main1(fooMod)
+	Main2()
+}
+
+func Main1(fooMod gp.Module) {
+	sum := fooMod.Call("add", 1, 2).AsLong()
+	fmt.Printf("Sum of 1 + 2: %d\n", sum.Int64())
+
+	dict := fooMod.Dict()
+	Point := dict.Get(gp.MakeStr("Point")).AsFunc()
+
+	point := Point.Call(3, 4)
+	fmt.Printf("dir(point): %v\n", point.Dir())
+	fmt.Printf("x: %v, y: %v\n", point.Attr("x"), point.Attr("y"))
+
+	distance := point.Call("distance").AsFloat()
+	fmt.Printf("Distance of 3 * 4: %f\n", distance.Float64())
+
+	point.Call("move", 1, 2)
+	fmt.Printf("x: %v, y: %v\n", point.Attr("x"), point.Attr("y"))
+
+	distance = point.Call("distance").AsFloat()
+	fmt.Printf("Distance of 4 * 6: %f\n", distance.Float64())
+
+	point.Call("print")
+}
+
+func Main2() {
+	fmt.Printf("=========== Main2 ==========\n")
+	_ = gp.RunString(`
 import foo
 point = foo.Point(3, 4)
 print("dir(point):", dir(point))
@@ -160,44 +209,13 @@ point.print()
 	`)
 }
 
-func Main2(fooMod gp.Module) {
-	sum := fooMod.Call("add", gp.MakeLong(1), gp.MakeLong(2)).AsLong()
-	fmt.Printf("Sum of 1 + 2: %d\n", sum.Int64())
-
-	dict := fooMod.Dict()
-	Point := dict.Get(gp.MakeStr("Point")).AsFunc()
-
-	point := Point.Call(gp.MakeLong(3), gp.MakeLong(4))
-	fmt.Printf("dir(point): %v\n", point.Dir())
-	fmt.Printf("x: %v, y: %v\n", point.GetAttr("x"), point.GetAttr("y"))
-
-	distance := point.Call("distance").AsFloat()
-	fmt.Printf("Distance of 3 * 4: %f\n", distance.Float64())
-
-	point.Call("move", gp.MakeFloat(1), gp.MakeFloat(2))
-	fmt.Printf("x: %v, y: %v\n", point.GetAttr("x"), point.GetAttr("y"))
-
-	distance = point.Call("distance").AsFloat()
-	fmt.Printf("Distance of 4 * 6: %f\n", distance.Float64())
-	point.Call("print")
-}
-
-func main() {
-	gp.Initialize()
-	defer gp.Finalize()
-	fooMod := foo.InitFooModule()
-	gp.GetModuleDict().Set(gp.MakeStr("foo").Object, fooMod.Object)
-
-	Main1()
-	Main2(fooMod)
-}
 ```
 
 ### Call gradio
 
-See [gradio](_demo/gradio).
-
 ```go
+// _demo/gradio/gradio.go
+
 package main
 
 import (
@@ -260,43 +278,10 @@ func main() {
 		})
 		textbox := gr.Call("Textbox")
 		examples := gr.Call("Examples", [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}}, textbox)
-		dataset := examples.GetAttr("dataset")
+		dataset := examples.Attr("dataset")
 		dropdown.Call("change", fn, dropdown, dataset)
 	})
 	demo.Call("launch")
 }
-```
 
-### Call matplotlib
-
-See [plot](_demo/plot).
-
-```go
-package main
-
-import gp "github.com/cpunion/go-python"
-
-type plt struct {
-	gp.Module
-}
-
-func Plt() plt {
-	return plt{gp.ImportModule("matplotlib.pyplot")}
-}
-
-func (m plt) Plot(args ...any) gp.Object {
-	return m.Call("plot", args...)
-}
-
-func (m plt) Show() {
-	m.Call("show")
-}
-
-func main() {
-	gp.Initialize()
-	defer gp.Finalize()
-	plt := Plt()
-	plt.Plot(gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
-	plt.Show()
-}
 ```
