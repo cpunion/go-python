@@ -1,12 +1,14 @@
 package math
 
 import (
+	"runtime"
 	"testing"
 
 	gp "github.com/cpunion/go-python"
 )
 
 func TestSqrt(t *testing.T) {
+	runtime.LockOSThread()
 	// Initialize Python
 	gp.Initialize()
 	defer gp.Finalize()
