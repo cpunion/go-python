@@ -8,6 +8,7 @@ import "C"
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"unsafe"
 )
 
@@ -15,6 +16,7 @@ type PyObject = C.PyObject
 type PyCFunction = C.PyCFunction
 
 func Initialize() {
+	runtime.LockOSThread()
 	C.Py_Initialize()
 }
 

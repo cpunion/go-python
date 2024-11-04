@@ -6,7 +6,6 @@ import (
 )
 
 func setupTest(t *testing.T) {
-	runtime.LockOSThread()
 	Initialize()
 	t.Cleanup(func() {
 		runtime.GC()
