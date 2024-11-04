@@ -53,7 +53,7 @@ func (obj Object) object() Object {
 func newObject(obj *PyObject) Object {
 	if obj == nil {
 		C.PyErr_Print()
-		return Object{}
+		panic("nil Python object")
 	}
 	o := &pyObject{obj: obj}
 	p := Object{o}

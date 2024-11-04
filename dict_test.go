@@ -134,10 +134,9 @@ func TestDictDel(t *testing.T) {
 	// Delete the key
 	dict.Del(key)
 
-	// After deletion, Get should return nil object
-	got = dict.Get(key)
-	if got.Obj() != nil {
-		t.Errorf("After deletion, got %v, want nil", got)
+	// After deletion, the key should not exist
+	if dict.Has(key) {
+		t.Errorf("After deletion, key %v should not exist", key)
 	}
 }
 

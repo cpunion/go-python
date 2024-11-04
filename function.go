@@ -41,24 +41,29 @@ func (f Func) CallObject(args Tuple) Object {
 }
 
 func (f Func) CallObjectKw(args Tuple, kw KwArgs) Object {
-	return f.call(args, From(map[string]any(kw)).AsDict())
+	// Convert keyword arguments to Python dict
+	kwDict := MakeDict(nil)
+	for k, v := range kw {
+		kwDict.Set(MakeStr(k), From(v))
+	}
+	return f.call(args, kwDict)
 }
 
 func (f Func) Call(args ...any) Object {
-	switch len(args) {
-	case 0:
-		return f.callNoArgs()
-	case 1:
-		return f.callOneArg(From(args[0]))
-	default:
-		argsTuple := C.PyTuple_New(C.Py_ssize_t(len(args)))
-		for i, arg := range args {
-			obj := From(arg).Obj()
-			C.Py_IncRef(obj)
-			r := C.PyTuple_SetItem(argsTuple, C.Py_ssize_t(i), obj)
-			check(r == 0, fmt.Sprintf("failed to set item %d in tuple", i))
+	fmt.Printf("args: %v\n", args)
+	argsTuple, kwArgs := splitArgs(args...)
+	fmt.Printf("argsTuple: %v\n", argsTuple)
+	if kwArgs == nil {
+		switch len(args) {
+		case 0:
+			return f.callNoArgs()
+		case 1:
+			return f.callOneArg(From(args[0]))
+		default:
+			return f.CallObject(argsTuple)
 		}
-		return newObject(C.PyObject_CallObject(f.obj, argsTuple))
+	} else {
+		return f.CallObjectKw(argsTuple, kwArgs)
 	}
 }
 
