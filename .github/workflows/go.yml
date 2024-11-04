@@ -10,6 +10,33 @@ on:
     branches: [ "main" ]
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install embedme
+        run: npm install -g embedme
+        
+      - name: Verify README.md embedded code
+        run: npx embedme --verify README.md
+        
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          
+      - name: Check formatting
+        run: |
+          if [ -n "$(go fmt ./...)" ]; then
+            echo "Some files are not properly formatted. Please run 'go fmt ./...'"
+            exit 1
+          fi
 
   build:
     strategy:
@@ -24,13 +51,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.20'
+        go-version: '1.23'
 
     - name: Build
       run: go build -v ./...
 
     - name: Test with coverage
-      run: go test -p 1 -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+      run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-24.04'
