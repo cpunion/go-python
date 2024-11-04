@@ -4,6 +4,7 @@ package gp
 #include <Python.h>
 */
 import "C"
+import "fmt"
 
 type List struct {
 	Object
@@ -31,7 +32,8 @@ func (l List) GetItem(index int) Object {
 func (l List) SetItem(index int, item Objecter) {
 	itemObj := item.Obj()
 	C.Py_IncRef(itemObj)
-	C.PyList_SetItem(l.obj, C.Py_ssize_t(index), itemObj)
+	r := C.PyList_SetItem(l.obj, C.Py_ssize_t(index), itemObj)
+	check(r == 0, fmt.Sprintf("failed to set item %d in list", index))
 }
 
 func (l List) Len() int {
@@ -39,5 +41,6 @@ func (l List) Len() int {
 }
 
 func (l List) Append(obj Objecter) {
-	C.PyList_Append(l.obj, obj.Obj())
+	r := C.PyList_Append(l.obj, obj.Obj())
+	check(r == 0, "failed to append item to list")
 }

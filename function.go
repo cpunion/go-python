@@ -4,6 +4,7 @@ package gp
 #include <Python.h>
 */
 import "C"
+import "fmt"
 
 type Objecter interface {
 	Obj() *PyObject
@@ -54,7 +55,8 @@ func (f Func) Call(args ...any) Object {
 		for i, arg := range args {
 			obj := From(arg).Obj()
 			C.Py_IncRef(obj)
-			C.PyTuple_SetItem(argsTuple, C.Py_ssize_t(i), obj)
+			r := C.PyTuple_SetItem(argsTuple, C.Py_ssize_t(i), obj)
+			check(r == 0, fmt.Sprintf("failed to set item %d in tuple", i))
 		}
 		return newObject(C.PyObject_CallObject(f.obj, argsTuple))
 	}

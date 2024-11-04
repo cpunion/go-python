@@ -1,6 +1,7 @@
 package gp
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 )
@@ -375,6 +376,56 @@ def make_tuple():
 		var nilObj Object
 		if nilObj.Obj() != nil {
 			t.Error("Object.Obj() should return nil for nil object")
+		}
+	}()
+
+	func() {
+		// Test AttrBytes
+		builtins := ImportModule("types")
+		objType := builtins.AttrFunc("SimpleNamespace")
+		obj := objType.Call()
+
+		// Create a simple object with bytes attribute
+		obj.SetAttr("bytes_val", From([]byte("hello")))
+
+		if !bytes.Equal(obj.AttrBytes("bytes_val").Bytes(), []byte("hello")) {
+			t.Error("AttrBytes failed")
+		}
+	}()
+
+	func() {
+		// Test Object.Call with kwargs
+		pyCode := `
+def test_func(a, b=10, c="default"):
+    return (a, b, c)
+`
+		locals := MakeDict(nil)
+		globals := MakeDict(nil)
+		globals.Set(MakeStr("__builtins__"), builtins.Object)
+
+		code, err := CompileString(pyCode, "<string>", FileInput)
+		if err != nil {
+			t.Errorf("CompileString() error = %v", err)
+		}
+		EvalCode(code, globals, locals)
+
+		testFunc := locals.Get(MakeStr("test_func"))
+
+		// Call with positional and keyword arguments
+		result := testFunc.Call("__call__", 1, KwArgs{
+			"b": 20,
+			"c": "custom",
+		})
+
+		tuple := result.AsTuple()
+		if tuple.Get(0).AsLong().Int64() != 1 {
+			t.Error("Wrong value for first argument")
+		}
+		if tuple.Get(1).AsLong().Int64() != 20 {
+			t.Error("Wrong value for keyword argument b")
+		}
+		if tuple.Get(2).AsStr().String() != "custom" {
+			t.Error("Wrong value for keyword argument c")
 		}
 	}()
 }

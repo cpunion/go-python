@@ -18,9 +18,7 @@ func newDict(obj *PyObject) Dict {
 }
 
 func DictFromPairs(pairs ...any) Dict {
-	if len(pairs)%2 != 0 {
-		panic("DictFromPairs requires an even number of arguments")
-	}
+	check(len(pairs)%2 == 0, "DictFromPairs requires an even number of arguments")
 	dict := newDict(C.PyDict_New())
 	for i := 0; i < len(pairs); i += 2 {
 		key := From(pairs[i])
@@ -62,9 +60,7 @@ func (d Dict) SetString(key string, value Objecter) {
 	ckey := AllocCStr(key)
 	r := C.PyDict_SetItemString(d.obj, ckey, valueObj)
 	C.free(unsafe.Pointer(ckey))
-	if r != 0 {
-		panic(fmt.Errorf("failed to set item string: %v", r))
-	}
+	check(r == 0, fmt.Sprintf("failed to set item string: %v", r))
 }
 
 func (d Dict) GetString(key string) Object {
@@ -81,9 +77,7 @@ func (d Dict) Del(key Objecter) {
 
 func (d Dict) ForEach(fn func(key, value Object)) {
 	items := C.PyDict_Items(d.obj)
-	if items == nil {
-		panic(fmt.Errorf("failed to get items of dict"))
-	}
+	check(items != nil, "failed to get items of dict")
 	defer C.Py_DecRef(items)
 	iter := C.PyObject_GetIter(items)
 	for {

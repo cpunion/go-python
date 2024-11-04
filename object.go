@@ -117,7 +117,9 @@ func (obj Object) AttrFunc(name string) Func {
 
 func (obj Object) SetAttr(name string, value any) {
 	cname := AllocCStr(name)
-	C.PyObject_SetAttrString(obj.obj, cname, From(value).obj)
+	r := C.PyObject_SetAttrString(obj.obj, cname, From(value).obj)
+	C.PyErr_Print()
+	check(r == 0, fmt.Sprintf("failed to set attribute %s", name))
 	C.free(unsafe.Pointer(cname))
 }
 

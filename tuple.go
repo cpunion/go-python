@@ -4,6 +4,7 @@ package gp
 #include <Python.h>
 */
 import "C"
+import "fmt"
 
 type Tuple struct {
 	Object
@@ -35,7 +36,8 @@ func (t Tuple) Get(index int) Object {
 func (t Tuple) Set(index int, obj Objecter) {
 	objObj := obj.Obj()
 	C.Py_IncRef(objObj)
-	C.PyTuple_SetItem(t.obj, C.Py_ssize_t(index), objObj)
+	r := C.PyTuple_SetItem(t.obj, C.Py_ssize_t(index), objObj)
+	check(r == 0, fmt.Sprintf("failed to set item %d in tuple", index))
 }
 
 func (t Tuple) Len() int {
