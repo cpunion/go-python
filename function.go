@@ -4,7 +4,6 @@ package gp
 #include <Python.h>
 */
 import "C"
-import "fmt"
 
 type Objecter interface {
 	Obj() *PyObject
@@ -50,9 +49,7 @@ func (f Func) CallObjectKw(args Tuple, kw KwArgs) Object {
 }
 
 func (f Func) Call(args ...any) Object {
-	fmt.Printf("args: %v\n", args)
 	argsTuple, kwArgs := splitArgs(args...)
-	fmt.Printf("argsTuple: %v\n", argsTuple)
 	if kwArgs == nil {
 		switch len(args) {
 		case 0:

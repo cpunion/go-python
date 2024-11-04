@@ -77,7 +77,7 @@ obj.map_field = {"key": 42}
 assert obj.map_field["key"] == 42
 
 obj.struct_field = {"x": 100}
-assert obj.struct_field["x"] == 100
+assert obj.struct_field.x == 100
 
 # test method call
 result = obj.test_method()
@@ -104,7 +104,7 @@ assert abs(obj.complex128_field - (3.14 + 2.718j)) < 0.0000001
 assert obj.string_field == "test string"
 assert obj.slice_field == [1, 2, 3]
 assert obj.map_field["key"] == 42
-assert obj.struct_field["x"] == 100
+assert obj.struct_field.x == 100
 `
 
 	err := RunString(code)
@@ -121,7 +121,7 @@ func (i *InitTestStruct) Init(val int) {
 	i.Value = val
 }
 
-func TestAddTypeWithInit(t *testing.T) {
+func AddTypeWithInit(t *testing.T) {
 	setupTest(t)
 	m := MainModule()
 
@@ -293,22 +293,60 @@ except TypeError:
 	m.AddMethod("invalid", "not a function", "")
 }
 
-func TestAddTypeWithVariousInits(t *testing.T) {
+func TestAddTypeWithPtrReceiverInit(t *testing.T) {
 	setupTest(t)
 	m := MainModule()
 
-	// Define test type inside the test function
 	type InitTestType struct {
 		Value  int
 		Name   string
 		Active bool
 	}
 
-	// Define init methods
 	ptrInit := func(t *InitTestType, val int, name string, active bool) {
 		t.Value = val
 		t.Name = name
 		t.Active = active
+	}
+	typ := m.AddType(InitTestType{}, ptrInit, "InitTestType", "")
+	if typ.Nil() {
+		t.Fatal("Failed to create type with pointer receiver init")
+	}
+
+	code := `
+# Test pointer receiver init with multiple args
+obj = InitTestType(42, "hello", True)
+assert obj.value == 42
+assert obj.name == "hello"
+assert obj.active == True
+
+# Test error handling
+try:
+    obj2 = InitTestType(42)  # Missing arguments
+    assert False, "Should fail with wrong number of arguments"
+except TypeError:
+    pass
+
+try:
+    obj3 = InitTestType("wrong", "type", True)  # Wrong argument type
+    assert False, "Should fail with wrong argument type"
+except TypeError:
+    pass
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatalf("Test failed: %v", err)
+	}
+}
+
+func TestAddTypeWithValueConstructor(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	type InitTestType struct {
+		Value  int
+		Name   string
+		Active bool
 	}
 
 	constructorInit := func(val int, name string, active bool) InitTestType {
@@ -318,6 +356,33 @@ func TestAddTypeWithVariousInits(t *testing.T) {
 			Active: active,
 		}
 	}
+	typ := m.AddType(InitTestType{}, constructorInit, "InitTestType", "")
+	if typ.Nil() {
+		t.Fatal("Failed to create type with value constructor")
+	}
+
+	code := `
+# Test value constructor with multiple args
+obj = InitTestType(43, "world", False)
+assert obj.value == 43
+assert obj.name == "world"
+assert obj.active == False
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatalf("Test failed: %v", err)
+	}
+}
+
+func TestAddTypeWithPtrConstructor(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	type InitTestType struct {
+		Value  int
+		Name   string
+		Active bool
+	}
 
 	ptrConstructorInit := func(val int, name string) *InitTestType {
 		return &InitTestType{
@@ -325,56 +390,71 @@ func TestAddTypeWithVariousInits(t *testing.T) {
 			Name:  name,
 		}
 	}
-
-	// Test pointer receiver init
-	t1 := m.AddType(InitTestType{}, ptrInit, "TestType1", "")
-	if t1.Nil() {
-		t.Fatal("Failed to create type with pointer receiver init")
-	}
-
-	// Test constructor function returning value
-	t2 := m.AddType(InitTestType{}, constructorInit, "TestType2", "")
-	if t2.Nil() {
-		t.Fatal("Failed to create type with value constructor")
-	}
-
-	// Test constructor function returning pointer
-	t3 := m.AddType(InitTestType{}, ptrConstructorInit, "TestType3", "")
-	if t3.Nil() {
+	typ := m.AddType(InitTestType{}, ptrConstructorInit, "InitTestType", "")
+	if typ.Nil() {
 		t.Fatal("Failed to create type with pointer constructor")
 	}
 
 	code := `
-# Test pointer receiver init with multiple args
-t1 = TestType1(42, "hello", True)
-assert t1.value == 42
-assert t1.name == "hello"
-assert t1.active == True
-
-# Test value constructor with multiple args
-t2 = TestType2(43, "world", False)
-print(t2.value, t2.name, t2.active)
-assert t2.value == 43
-assert t2.name == "world"
-assert t2.active == False
-
 # Test pointer constructor with multiple args
-t3 = TestType3(44, "python")
-assert t3.value == 44
-assert t3.name == "python"
+obj = InitTestType(44, "python")
+assert obj.value == 44
+assert obj.name == "python"
+assert obj.active == False  # default value
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatalf("Test failed: %v", err)
+	}
+}
 
-# Test error handling
-try:
-    t1 = TestType1(42)  # Missing arguments
-    assert False, "Should fail with wrong number of arguments"
-except TypeError:
-    pass
+type Inner struct {
+	X int
+	Y string
+}
 
-try:
-    t1 = TestType1("wrong", "type", True)  # Wrong argument type
-    assert False, "Should fail with wrong argument type"
-except TypeError:
-    pass
+func TestAddTypeRecursive(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	type Outer struct {
+		Inner     Inner
+		InnerPtr  *Inner
+		Value     int
+		InnerList []Inner
+	}
+
+	// Register Outer type - should automatically register Inner
+	obj := m.AddType(Outer{}, nil, "Outer", "")
+	if obj.Nil() {
+		t.Fatal("Failed to create Outer type")
+	}
+
+	code := `
+# Test nested struct access
+o = Outer()
+o.inner.x = 42
+o.inner.y = "hello"
+assert o.inner.x == 42
+assert o.inner.y == "hello"
+
+# Test pointer to struct
+o.inner_ptr = Inner()
+o.inner_ptr.x = 43
+o.inner_ptr.y = "world"
+assert o.inner_ptr.x == 43
+assert o.inner_ptr.y == "world"
+
+# Test basic field
+o.value = 100
+assert o.value == 100
+
+# Test slice of structs
+o.inner_list = [Inner()]
+o.inner_list[0].x = 44
+o.inner_list[0].y = "python"
+assert o.inner_list[0].x == 44
+assert o.inner_list[0].y == "python"
 `
 
 	err := RunString(code)

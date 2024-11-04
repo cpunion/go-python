@@ -555,6 +555,11 @@ func TestToValue(t *testing.T) {
 	}()
 
 	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("ToValue should fail for nil reflect.Value")
+			}
+		}()
 		var nilValue reflect.Value
 		if ToValue(From(42), nilValue) {
 			t.Error("ToValue should fail for nil reflect.Value")
@@ -562,6 +567,11 @@ func TestToValue(t *testing.T) {
 	}()
 
 	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("ToValue should fail for non-settable value")
+			}
+		}()
 		v := reflect.ValueOf(42) // not settable
 		if ToValue(From(43), v) {
 			t.Error("ToValue should fail for non-settable value")
