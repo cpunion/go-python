@@ -517,3 +517,175 @@ func TestToValue(t *testing.T) {
 		}
 	}()
 }
+
+func TestFromSpecialCases(t *testing.T) {
+	setupTest(t)
+
+	func() {
+		// Test From with uint values
+		tests := []struct {
+			input    uint
+			expected uint64
+		}{
+			{0, 0},
+			{42, 42},
+			{^uint(0), ^uint64(0)}, // maximum uint value
+		}
+
+		for _, tt := range tests {
+			obj := From(tt.input)
+			if !obj.IsLong() {
+				t.Errorf("From(uint) did not create Long object")
+			}
+			if got := obj.AsLong().Uint64(); got != tt.expected {
+				t.Errorf("From(%d) = %d, want %d", tt.input, got, tt.expected)
+			}
+		}
+	}()
+
+	func() {
+		// Test From with Object.Obj()
+		original := From(42)
+		obj := From(original.Obj())
+
+		if !obj.IsLong() {
+			t.Error("From(Object.Obj()) did not create Long object")
+		}
+		if got := obj.AsLong().Int64(); got != 42 {
+			t.Errorf("From(Object.Obj()) = %d, want 42", got)
+		}
+
+		// Test that the new object is independent
+		original = From(100)
+		if got := obj.AsLong().Int64(); got != 42 {
+			t.Errorf("Object was not independent, got %d after modifying original", got)
+		}
+	}()
+}
+
+func TestToValueWithCustomType(t *testing.T) {
+	setupTest(t)
+
+	// Define a custom Go type
+	type Point struct {
+		X int
+		Y int
+	}
+
+	// Add the type to Python
+	pointClass := MainModule().AddType(Point{}, nil, "Point", "Point class")
+
+	func() {
+		// Create a Point instance in Python and convert it back to Go
+		pyCode := `
+p = Point()
+p.x = 10
+p.y = 20
+`
+		locals := MakeDict(nil)
+		globals := MakeDict(nil)
+		builtins := ImportModule("builtins")
+		globals.Set(MakeStr("__builtins__"), builtins.Object)
+		globals.Set(MakeStr("Point"), pointClass)
+
+		code, err := CompileString(pyCode, "<string>", FileInput)
+		if err != nil {
+			t.Errorf("CompileString() error = %v", err)
+		}
+		EvalCode(code, globals, locals)
+
+		// Get the Python Point instance
+		pyPoint := locals.Get(MakeStr("p"))
+
+		// Convert back to Go Point struct
+		var point Point
+		v := reflect.ValueOf(&point).Elem()
+		if !ToValue(pyPoint, v) {
+			t.Error("ToValue failed for custom type Point")
+		}
+
+		// Verify the values
+		if point.X != 10 || point.Y != 20 {
+			t.Errorf("Expected Point{10, 20}, got Point{%d, %d}", point.X, point.Y)
+		}
+	}()
+
+	func() {
+		// Test converting a non-Point Python object to Point should fail
+		dict := MakeDict(nil)
+		dict.Set(MakeStr("x"), From(10))
+		dict.Set(MakeStr("y"), From(20))
+
+		var point Point
+		v := reflect.ValueOf(&point).Elem()
+		if !ToValue(dict.Object, v) {
+			t.Error("ToValue failed for custom type Point")
+		}
+
+		if point.X != 10 || point.Y != 20 {
+			t.Errorf("Expected Point{10, 20}, got Point{%d, %d}", point.X, point.Y)
+		}
+	}()
+}
+
+func TestFromWithCustomType(t *testing.T) {
+	setupTest(t)
+
+	type Point struct {
+		X int
+		Y int
+	}
+
+	// Add the type to Python
+	pointClass := MainModule().AddType(Point{}, nil, "Point", "Point class")
+
+	func() {
+		// Test From with struct instance
+		p := Point{X: 10, Y: 20}
+		obj := From(p)
+
+		// Verify the type
+		if obj.Type().Obj() != pointClass.Obj() {
+			t.Error("From(Point) created object with wrong type")
+		}
+
+		// Verify the values
+		if obj.AttrLong("x").Int64() != 10 {
+			t.Error("Wrong X value after From conversion")
+		}
+		if obj.AttrLong("y").Int64() != 20 {
+			t.Error("Wrong Y value after From conversion")
+		}
+
+		// Convert back to Go and verify
+		var p2 Point
+		v := reflect.ValueOf(&p2).Elem()
+		if !ToValue(obj, v) {
+			t.Error("ToValue failed for custom type Point")
+		}
+
+		if p2.X != p.X || p2.Y != p.Y {
+			t.Errorf("Round trip conversion failed: got Point{%d, %d}, want Point{%d, %d}",
+				p2.X, p2.Y, p.X, p.Y)
+		}
+	}()
+
+	func() {
+		// Test From with pointer to struct
+		p := &Point{X: 30, Y: 40}
+		obj := From(p)
+
+		// Verify the type
+		if obj.Type().Obj() != pointClass.Obj() {
+			t.Error("From(*Point) created object with wrong type")
+		}
+
+		// Verify the values
+		if obj.AttrLong("x").Int64() != 30 {
+			t.Error("Wrong X value after From pointer conversion")
+		}
+		if obj.AttrLong("y").Int64() != 40 {
+			t.Error("Wrong Y value after From pointer conversion")
+		}
+	}()
+}
