@@ -292,3 +292,93 @@ except TypeError:
 	}()
 	m.AddMethod("invalid", "not a function", "")
 }
+
+func TestAddTypeWithVariousInits(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	// Define test type inside the test function
+	type InitTestType struct {
+		Value  int
+		Name   string
+		Active bool
+	}
+
+	// Define init methods
+	ptrInit := func(t *InitTestType, val int, name string, active bool) {
+		t.Value = val
+		t.Name = name
+		t.Active = active
+	}
+
+	constructorInit := func(val int, name string, active bool) InitTestType {
+		return InitTestType{
+			Value:  val,
+			Name:   name,
+			Active: active,
+		}
+	}
+
+	ptrConstructorInit := func(val int, name string) *InitTestType {
+		return &InitTestType{
+			Value: val,
+			Name:  name,
+		}
+	}
+
+	// Test pointer receiver init
+	t1 := m.AddType(InitTestType{}, ptrInit, "TestType1", "")
+	if t1.Nil() {
+		t.Fatal("Failed to create type with pointer receiver init")
+	}
+
+	// Test constructor function returning value
+	t2 := m.AddType(InitTestType{}, constructorInit, "TestType2", "")
+	if t2.Nil() {
+		t.Fatal("Failed to create type with value constructor")
+	}
+
+	// Test constructor function returning pointer
+	t3 := m.AddType(InitTestType{}, ptrConstructorInit, "TestType3", "")
+	if t3.Nil() {
+		t.Fatal("Failed to create type with pointer constructor")
+	}
+
+	code := `
+# Test pointer receiver init with multiple args
+t1 = TestType1(42, "hello", True)
+assert t1.value == 42
+assert t1.name == "hello"
+assert t1.active == True
+
+# Test value constructor with multiple args
+t2 = TestType2(43, "world", False)
+print(t2.value, t2.name, t2.active)
+assert t2.value == 43
+assert t2.name == "world"
+assert t2.active == False
+
+# Test pointer constructor with multiple args
+t3 = TestType3(44, "python")
+assert t3.value == 44
+assert t3.name == "python"
+
+# Test error handling
+try:
+    t1 = TestType1(42)  # Missing arguments
+    assert False, "Should fail with wrong number of arguments"
+except TypeError:
+    pass
+
+try:
+    t1 = TestType1("wrong", "type", True)  # Wrong argument type
+    assert False, "Should fail with wrong argument type"
+except TypeError:
+    pass
+`
+
+	err := RunString(code)
+	if err != nil {
+		t.Fatalf("Test failed: %v", err)
+	}
+}

@@ -164,10 +164,10 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 	}
 
 	methodType := reflect.TypeOf(methodMeta.fn)
-
 	argc := C.PyTuple_Size(args)
 	expectedArgs := methodType.NumIn()
 	hasReceiver := methodMeta.hasRecv
+	isInit := typeMeta.init == methodMeta
 
 	if hasReceiver {
 		expectedArgs-- // decrease expected number if it has a receiver
@@ -208,6 +208,22 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 	}
 
 	results := reflect.ValueOf(methodMeta.fn).Call(goArgs)
+
+	// Handle init function return value
+	if isInit && !hasReceiver {
+		if len(results) > 0 {
+			wrapper := (*wrapperType)(unsafe.Pointer(self))
+			vPtr := unsafe.Pointer(&wrapper.v)
+			if results[0].Kind() == reflect.Ptr {
+				reflect.NewAt(typeMeta.typ, vPtr).Elem().Set(results[0].Elem())
+			} else {
+				reflect.NewAt(typeMeta.typ, vPtr).Elem().Set(results[0])
+			}
+			return None().Obj()
+		} else {
+			panic("init function without receiver must return the type being created")
+		}
+	}
 
 	if len(results) == 0 {
 		return None().Obj()
@@ -423,13 +439,41 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 	slots := make([]C.PyType_Slot, 0)
 	if init != nil {
 		slots = append(slots, C.PyType_Slot{slot: C.Py_tp_init, pfunc: unsafe.Pointer(C.wrapperInit)})
-		meta.init = &slotMeta{
-			name:       runtime.FuncForPC(reflect.ValueOf(init).Pointer()).Name(),
-			methodName: "__init__",
-			fn:         init,
-			typ:        reflect.TypeOf(init),
-			slotType:   slotMethod,
-			hasRecv:    true,
+
+		initVal := reflect.ValueOf(init)
+		initType := initVal.Type()
+
+		if initType.Kind() != reflect.Func {
+			panic("Init must be a function")
+		}
+
+		// Check if it's a method with receiver
+		if initType.NumIn() > 0 &&
+			initType.In(0).Kind() == reflect.Ptr &&
+			initType.In(0).Elem() == ty {
+			// (*T).Init form - pointer receiver
+			meta.init = &slotMeta{
+				name:       runtime.FuncForPC(initVal.Pointer()).Name(),
+				methodName: "__init__",
+				fn:         init,
+				typ:        initType,
+				slotType:   slotMethod,
+				hasRecv:    true,
+			}
+		} else if initType.NumOut() == 1 &&
+			(initType.Out(0) == ty ||
+				(initType.Out(0).Kind() == reflect.Ptr && initType.Out(0).Elem() == ty)) {
+			// Constructor function returning T or *T
+			meta.init = &slotMeta{
+				name:       runtime.FuncForPC(initVal.Pointer()).Name(),
+				methodName: "__init__",
+				fn:         init,
+				typ:        initType,
+				slotType:   slotMethod,
+				hasRecv:    false,
+			}
+		} else {
+			panic("Init function must either have a pointer receiver (*T) or return T/*T")
 		}
 	}
 	members, getsets := getMembers(ty, meta.methods)
