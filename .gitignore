@@ -1,4 +1,5 @@
 .tool-versions
 *.out
+coverage.*
 *.pyc
 __pycache__
