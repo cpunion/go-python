@@ -15,7 +15,6 @@ import (
 // the Python Object's DecRef method during garbage collection.
 type pyObject struct {
 	obj *C.PyObject
-	gid int64
 }
 
 func (obj *pyObject) Obj() *PyObject {
@@ -55,14 +54,12 @@ func newObject(obj *PyObject) Object {
 		C.PyErr_Print()
 		panic("nil Python object")
 	}
-	o := &pyObject{obj: obj, gid: getThreadID()}
-	p := Object{o}
-
+	o := &pyObject{obj: obj}
 	runtime.SetFinalizer(o, func(o *pyObject) {
-		maps := getThreadData(o.gid)
-		maps.addPyObject(o.obj)
+		getGlobalData().addDecRef(o.obj)
+		runtime.SetFinalizer(o, nil)
 	})
-	return p
+	return Object{o}
 }
 
 func (obj Object) Dir() List {

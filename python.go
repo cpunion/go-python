@@ -17,12 +17,13 @@ type PyCFunction = C.PyCFunction
 func Initialize() {
 	runtime.LockOSThread()
 	C.Py_Initialize()
-	initThreadLocal()
+	initGlobal()
 }
 
 func Finalize() {
-	cleanupThreadLocal()
+	markFinished()
 	r := C.Py_FinalizeEx()
+	cleanupGlobal()
 	check(r == 0, "failed to finalize Python")
 }
 

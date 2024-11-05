@@ -66,7 +66,7 @@ func allocWrapper(typ *C.PyTypeObject, obj any) *wrapperType {
 	wrapper := (*wrapperType)(unsafe.Pointer(self))
 	holder := new(objectHolder)
 	holder.obj = obj
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	maps.holders.PushFront(holder)
 	wrapper.goObj = holder.obj
 	wrapper.holder = holder
@@ -74,13 +74,13 @@ func allocWrapper(typ *C.PyTypeObject, obj any) *wrapperType {
 }
 
 func freeWrapper(wrapper *wrapperType) {
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	maps.holders.Remove(wrapper.holder)
 }
 
 //export wrapperAlloc
 func wrapperAlloc(typ *C.PyTypeObject, size C.Py_ssize_t) *C.PyObject {
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	meta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(typ))]
 	wrapper := allocWrapper(typ, reflect.New(meta.typ).Interface())
 	if wrapper == nil {
@@ -99,7 +99,7 @@ func wrapperDealloc(self *C.PyObject) {
 //export wrapperInit
 func wrapperInit(self, args *C.PyObject) C.int {
 	typ := (*C.PyObject)(self).ob_type
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	typeMeta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(typ))]
 	if typeMeta.init == nil {
 		return 0
@@ -112,7 +112,7 @@ func wrapperInit(self, args *C.PyObject) C.int {
 
 //export getterMethod
 func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.PyObject {
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	typeMeta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(self.ob_type))]
 	if typeMeta == nil {
 		SetError(fmt.Errorf("type %v not registered", FromPy(self)))
@@ -157,7 +157,7 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 
 //export setterMethod
 func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.int) C.int {
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	typeMeta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(self.ob_type))]
 	if typeMeta == nil {
 		SetError(fmt.Errorf("type %v not registered", FromPy(self)))
@@ -238,7 +238,7 @@ func wrapperMethod(self, args *C.PyObject, methodId C.int) *C.PyObject {
 		key = (*C.PyObject)(unsafe.Pointer(self.ob_type))
 	}
 
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	typeMeta, ok := maps.typeMetas[key]
 	if !ok {
 		SetError(fmt.Errorf("type %v not registered", FromPy(key)))
@@ -457,7 +457,7 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 	}
 
 	// Check if type already registered
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	if pyType, ok := maps.pyTypes[ty]; ok {
 		return newObject(pyType)
 	}
@@ -569,7 +569,7 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 		}
 		// Recursively register struct types
 		if fieldType.Kind() == reflect.Struct {
-			maps := getCurrentThreadData()
+			maps := getGlobalData()
 			if _, ok := maps.pyTypes[fieldType]; !ok {
 				// Generate a unique type name based on package path and type name
 				nestedName := fieldType.Name()
@@ -600,7 +600,7 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 	name = goNameToPythonName(name)
 	doc = name + doc
 
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	meta, ok := maps.typeMetas[m.obj]
 	if !ok {
 		meta = &typeMeta{

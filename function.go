@@ -36,12 +36,12 @@ func (f Func) callOneArg(arg Objecter) Object {
 }
 
 func (f Func) CallObject(args Tuple) Object {
-	defer getCurrentThreadData().decRefObjectsIfNeeded()
+	defer getGlobalData().decRefObjectsIfNeeded()
 	return newObject(C.PyObject_CallObject(f.obj, args.obj))
 }
 
 func (f Func) CallObjectKw(args Tuple, kw KwArgs) Object {
-	defer getCurrentThreadData().decRefObjectsIfNeeded()
+	defer getGlobalData().decRefObjectsIfNeeded()
 	// Convert keyword arguments to Python dict
 	kwDict := MakeDict(nil)
 	for k, v := range kw {
@@ -53,7 +53,7 @@ func (f Func) CallObjectKw(args Tuple, kw KwArgs) Object {
 func (f Func) Call(args ...any) Object {
 	argsTuple, kwArgs := splitArgs(args...)
 	if kwArgs == nil {
-		defer getCurrentThreadData().decRefObjectsIfNeeded()
+		defer getGlobalData().decRefObjectsIfNeeded()
 		switch len(args) {
 		case 0:
 			return f.callNoArgs()

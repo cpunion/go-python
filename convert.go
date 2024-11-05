@@ -63,7 +63,7 @@ func From(v any) Object {
 		switch vv.Kind() {
 		case reflect.Ptr:
 			if vv.Elem().Type().Kind() == reflect.Struct {
-				maps := getCurrentThreadData()
+				maps := getGlobalData()
 				if pyType, ok := maps.pyTypes[vv.Elem().Type()]; ok {
 					wrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), vv.Interface())
 					return newObject((*C.PyObject)(unsafe.Pointer(wrapper)))
@@ -173,7 +173,7 @@ func ToValue(obj Object, v reflect.Value) bool {
 				}
 			}
 		} else {
-			maps := getCurrentThreadData()
+			maps := getGlobalData()
 			tyMeta := maps.typeMetas[obj.Type().Obj()]
 			if tyMeta == nil {
 				return false
@@ -192,7 +192,7 @@ func fromSlice(v reflect.Value) List {
 	l := v.Len()
 	list := newList(C.PyList_New(C.Py_ssize_t(l)))
 	ty := v.Type().Elem()
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	pyType, ok := maps.pyTypes[ty]
 	if !ok {
 		for i := 0; i < l; i++ {
@@ -221,7 +221,7 @@ func fromMap(v reflect.Value) Dict {
 
 func fromStruct(v reflect.Value) Object {
 	ty := v.Type()
-	maps := getCurrentThreadData()
+	maps := getGlobalData()
 	if typeObj, ok := maps.pyTypes[ty]; ok {
 		ptr := reflect.New(ty)
 		ptr.Elem().Set(v)
