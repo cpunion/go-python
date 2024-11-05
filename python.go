@@ -21,9 +21,9 @@ func Initialize() {
 }
 
 func Finalize() {
+	cleanupThreadLocal()
 	r := C.Py_FinalizeEx()
 	check(r == 0, "failed to finalize Python")
-	cleanupThreadLocal()
 }
 
 // ----------------------------------------------------------------------------

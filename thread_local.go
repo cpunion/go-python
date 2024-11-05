@@ -35,10 +35,47 @@ func (l *holderList) Remove(holder *objectHolder) {
 	}
 }
 
+type decRefList struct {
+	objects []*C.PyObject
+	mu      sync.Mutex
+}
+
+func (l *decRefList) add(obj *C.PyObject) {
+	l.mu.Lock()
+	l.objects = append(l.objects, obj)
+	l.mu.Unlock()
+}
+
+func (l *decRefList) decRefAll() {
+	var list []*C.PyObject
+
+	l.mu.Lock()
+	list = l.objects
+	l.objects = make([]*C.PyObject, 0, maxPyObjects*2)
+	l.mu.Unlock()
+
+	for _, obj := range list {
+		C.Py_DecRef(obj)
+	}
+}
+
 type threadData struct {
-	typeMetas map[*C.PyObject]*typeMeta
-	pyTypes   map[reflect.Type]*C.PyObject
-	holders   holderList
+	typeMetas  map[*C.PyObject]*typeMeta
+	pyTypes    map[reflect.Type]*C.PyObject
+	holders    holderList
+	decRefList decRefList
+}
+
+const maxPyObjects = 128
+
+func (td *threadData) addPyObject(obj *C.PyObject) {
+	td.decRefList.add(obj)
+}
+
+func (td *threadData) decRefObjectsIfNeeded() {
+	if len(td.decRefList.objects) > maxPyObjects {
+		td.decRefList.decRefAll()
+	}
 }
 
 var (
@@ -46,6 +83,11 @@ var (
 )
 
 func getCurrentThreadData() *threadData {
+	id := getThreadID()
+	return getThreadData(id)
+}
+
+func getThreadData(gid int64) *threadData {
 	id := getThreadID()
 	maps, ok := globalThreadData.Load(id)
 	if !ok {
