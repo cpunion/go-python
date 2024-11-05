@@ -75,7 +75,6 @@ type globalData struct {
 
 var (
 	global *globalData
-	once   sync.Once
 )
 
 func getGlobalData() *globalData {
