@@ -3,26 +3,26 @@ package main
 import (
 	"fmt"
 
-	gp "github.com/cpunion/go-python"
+	. "github.com/cpunion/go-python"
 	"github.com/cpunion/go-python/demo/module/foo"
 )
 
 func main() {
-	gp.Initialize()
-	defer gp.Finalize()
+	Initialize()
+	defer Finalize()
 	fooMod := foo.InitFooModule()
-	gp.GetModuleDict().SetString("foo", fooMod)
+	GetModuleDict().SetString("foo", fooMod)
 
 	Main1(fooMod)
 	Main2()
 }
 
-func Main1(fooMod gp.Module) {
+func Main1(fooMod Module) {
 	sum := fooMod.Call("add", 1, 2).AsLong()
 	fmt.Printf("Sum of 1 + 2: %d\n", sum.Int64())
 
 	dict := fooMod.Dict()
-	Point := dict.Get(gp.MakeStr("Point")).AsFunc()
+	Point := dict.Get(MakeStr("Point")).AsFunc()
 
 	point := Point.Call(3, 4)
 	fmt.Printf("dir(point): %v\n", point.Dir())
@@ -42,7 +42,7 @@ func Main1(fooMod gp.Module) {
 
 func Main2() {
 	fmt.Printf("=========== Main2 ==========\n")
-	_ = gp.RunString(`
+	_ = RunString(`
 import foo
 point = foo.Point(3, 4)
 print("dir(point):", dir(point))

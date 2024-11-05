@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	gp "github.com/cpunion/go-python"
+	. "github.com/cpunion/go-python"
 )
 
 /*
@@ -25,16 +25,16 @@ with gr.Blocks() as demo:
 demo.launch()
 */
 
-var gr gp.Module
+var gr Module
 
-func UpdateExamples(country string) gp.Object {
+func UpdateExamples(country string) Object {
 	println("country:", country)
 	if country == "USA" {
-		return gr.Call("Dataset", gp.KwArgs{
+		return gr.Call("Dataset", KwArgs{
 			"samples": [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}},
 		})
 	} else {
-		return gr.Call("Dataset", gp.KwArgs{
+		return gr.Call("Dataset", KwArgs{
 			"samples": [][]string{{"Islamabad"}, {"Karachi"}, {"Lahore"}},
 		})
 	}
@@ -46,15 +46,15 @@ func main() {
 		return
 	}
 
-	gp.Initialize()
-	defer gp.Finalize()
-	gr = gp.ImportModule("gradio")
-	fn := gp.CreateFunc("update_examples", UpdateExamples,
+	Initialize()
+	defer Finalize()
+	gr = ImportModule("gradio")
+	fn := CreateFunc("update_examples", UpdateExamples,
 		"(country, /)\n--\n\nUpdate examples based on country")
 	// Would be (in the future):
-	// fn := gp.FuncOf(UpdateExamples)
-	demo := gp.With(gr.Call("Blocks"), func(v gp.Object) {
-		dropdown := gr.Call("Dropdown", gp.KwArgs{
+	// fn := FuncOf(UpdateExamples)
+	demo := With(gr.Call("Blocks"), func(v Object) {
+		dropdown := gr.Call("Dropdown", KwArgs{
 			"label":   "Country",
 			"choices": []string{"USA", "Pakistan"},
 			"value":   "USA",
