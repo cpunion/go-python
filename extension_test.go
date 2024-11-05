@@ -121,7 +121,7 @@ func (i *InitTestStruct) Init(val int) {
 	i.Value = val
 }
 
-func AddTypeWithInit(t *testing.T) {
+func TestAddTypeWithInit(t *testing.T) {
 	setupTest(t)
 	m := MainModule()
 
@@ -208,7 +208,10 @@ except TypeError:
 	if err != nil {
 		t.Fatalf("Test failed: %v", err)
 	}
+}
 
+func TestCreateFuncInvalid(t *testing.T) {
+	setupTest(t)
 	// Test invalid function type
 	defer func() {
 		if r := recover(); r == nil {

@@ -31,7 +31,7 @@ func (m Module) Dict() Dict {
 
 func (m Module) AddObject(name string, obj Object) int {
 	cname := AllocCStr(name)
-	r := int(C.PyModule_AddObject(m.obj, cname, obj.obj))
+	r := int(C.PyModule_AddObjectRef(m.obj, cname, obj.obj))
 	C.free(unsafe.Pointer(cname))
 	return r
 }

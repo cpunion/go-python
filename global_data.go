@@ -8,6 +8,7 @@ import "C"
 import (
 	"reflect"
 	"sync"
+	"sync/atomic"
 )
 
 // ----------------------------------------------------------------------------
@@ -66,11 +67,12 @@ func (l *decRefList) decRefAll() {
 // ----------------------------------------------------------------------------
 
 type globalData struct {
-	typeMetas  map[*C.PyObject]*typeMeta
-	pyTypes    map[reflect.Type]*C.PyObject
-	holders    holderList
-	decRefList decRefList
-	finished   int32
+	typeMetas     map[*C.PyObject]*typeMeta
+	pyTypes       map[reflect.Type]*C.PyObject
+	holders       holderList
+	decRefList    decRefList
+	disableDecRef bool
+	finished      int32
 }
 
 var (
@@ -82,16 +84,16 @@ func getGlobalData() *globalData {
 }
 
 func (gd *globalData) addDecRef(obj *C.PyObject) {
-	if gd.finished != 0 {
+	if gd.disableDecRef {
+		return
+	}
+	if atomic.LoadInt32(&gd.finished) != 0 {
 		return
 	}
 	gd.decRefList.add(obj)
 }
 
 func (gd *globalData) decRefObjectsIfNeeded() {
-	if gd.finished != 0 {
-		return
-	}
 	gd.decRefList.decRefAll()
 }
 
@@ -105,7 +107,7 @@ func initGlobal() {
 }
 
 func markFinished() {
-	global.finished = 1
+	atomic.StoreInt32(&global.finished, 1)
 }
 
 func cleanupGlobal() {

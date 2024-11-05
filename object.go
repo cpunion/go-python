@@ -50,6 +50,11 @@ func (obj Object) object() Object {
 	return obj
 }
 
+func newObjectRef(obj *PyObject) Object {
+	C.Py_IncRef(obj)
+	return newObject(obj)
+}
+
 func newObject(obj *PyObject) Object {
 	if obj == nil {
 		C.PyErr_Print()

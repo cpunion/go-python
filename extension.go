@@ -290,7 +290,6 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 
 	for i := 0; i < int(argc); i++ {
 		arg := C.PyTuple_GetItem(args, C.Py_ssize_t(i))
-		C.Py_IncRef(arg)
 		argType := methodType.In(i + argIndex)
 		argPy := FromPy(arg)
 		goValue := reflect.New(argType).Elem()
@@ -459,7 +458,7 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 	// Check if type already registered
 	maps := getGlobalData()
 	if pyType, ok := maps.pyTypes[ty]; ok {
-		return newObject(pyType)
+		return newObjectRef(pyType)
 	}
 
 	meta := &typeMeta{
@@ -544,14 +543,15 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 
 	typeObj := C.PyType_FromSpec(spec)
 	if typeObj == nil {
+		C.free(unsafe.Pointer(spec.name))
+		C.free(unsafe.Pointer(slotsPtr))
 		panic(fmt.Sprintf("Failed to create type %s", name))
 	}
 
 	maps.typeMetas[typeObj] = meta
 	maps.pyTypes[ty] = typeObj
 
-	if C.PyModule_AddObject(m.obj, C.CString(name), typeObj) < 0 {
-		C.Py_DecRef(typeObj)
+	if C.PyModule_AddObjectRef(m.obj, C.CString(name), typeObj) < 0 {
 		panic(fmt.Sprintf("Failed to add type %s to module", name))
 	}
 
@@ -578,7 +578,7 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 		}
 	}
 
-	return newObject(typeObj)
+	return newObjectRef(typeObj)
 }
 
 func (m Module) AddMethod(name string, fn any, doc string) Func {
@@ -630,12 +630,12 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 		ml_doc:   cDoc,
 	}
 
-	pyFunc := C.PyCFunction_New(def, m.obj)
+	pyFunc := C.PyCFunction_NewEx(def, m.obj, m.obj)
 	if pyFunc == nil {
 		panic(fmt.Sprintf("Failed to create function %s", name))
 	}
 
-	if C.PyModule_AddObject(m.obj, cName, pyFunc) < 0 {
+	if C.PyModule_AddObjectRef(m.obj, cName, pyFunc) < 0 {
 		C.Py_DecRef(pyFunc)
 		panic(fmt.Sprintf("Failed to add function %s to module", name))
 	}
