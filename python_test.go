@@ -2,14 +2,21 @@ package gp
 
 import (
 	"runtime"
+	"sync"
 	"testing"
 )
 
+var (
+	testMutex sync.Mutex
+)
+
 func setupTest(t *testing.T) {
+	testMutex.Lock()
 	Initialize()
 	t.Cleanup(func() {
 		runtime.GC()
 		Finalize()
+		testMutex.Unlock()
 	})
 }
 
