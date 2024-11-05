@@ -131,6 +131,9 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 
 	fieldType := field.Type()
 	if fieldType.Kind() == reflect.Ptr && fieldType.Elem().Kind() == reflect.Struct {
+		if field.IsNil() {
+			return C.Py_None
+		}
 		if pyType, ok := maps.pyTypes[fieldType.Elem()]; ok {
 			newWrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), field.Interface())
 			if newWrapper == nil {
@@ -187,15 +190,24 @@ func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.i
 
 	fieldType := field.Type()
 	if fieldType.Kind() == reflect.Ptr && fieldType.Elem().Kind() == reflect.Struct {
+		if C.Py_Is(value, C.Py_None) != 0 {
+			field.Set(reflect.Zero(fieldType))
+			return 0
+		}
 		if C.Py_IS_TYPE(value, &C.PyDict_Type) != 0 {
 			if field.IsNil() {
 				field.Set(reflect.New(fieldType.Elem()))
 			}
 			if !ToValue(FromPy(value), field.Elem()) {
-				SetError(fmt.Errorf("failed to convert dict to %s", fieldType.Elem()))
+				SetTypeError(fmt.Errorf("failed to convert dict to %s", fieldType.Elem()))
 				return -1
 			}
 		} else {
+			pyType := C.Py_TYPE(value)
+			if _, ok := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(pyType))]; !ok {
+				SetTypeError(fmt.Errorf("invalid value of type %v for struct pointer field", FromPy((*C.PyObject)(unsafe.Pointer(pyType)))))
+				return -1
+			}
 			valueWrapper := (*wrapperType)(unsafe.Pointer(value))
 			if valueWrapper == nil {
 				SetError(fmt.Errorf("invalid value for struct pointer field"))
@@ -207,10 +219,15 @@ func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.i
 	} else if field.Kind() == reflect.Struct {
 		if C.Py_IS_TYPE(value, &C.PyDict_Type) != 0 {
 			if !ToValue(FromPy(value), field) {
-				SetError(fmt.Errorf("failed to convert dict to %s", field.Type()))
+				SetTypeError(fmt.Errorf("failed to convert dict to %s", field.Type()))
 				return -1
 			}
 		} else {
+			pyType := (*C.PyTypeObject)(unsafe.Pointer(value.ob_type))
+			if _, ok := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(pyType))]; !ok {
+				SetTypeError(fmt.Errorf("invalid value of type %v for struct field", FromPy((*C.PyObject)(unsafe.Pointer(pyType)))))
+				return -1
+			}
 			valueWrapper := (*wrapperType)(unsafe.Pointer(value))
 			if valueWrapper == nil {
 				SetError(fmt.Errorf("invalid value for struct field"))
@@ -218,14 +235,14 @@ func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.i
 			}
 			baseAddr := goPtr.UnsafePointer()
 			fieldAddr := unsafe.Add(baseAddr, typeMeta.typ.Field(methodMeta.index).Offset)
-			fieldPtr := reflect.NewAt(fieldType, fieldAddr).Interface()
-			reflect.ValueOf(fieldPtr).Set(reflect.ValueOf(valueWrapper.goObj))
+			fieldPtr := reflect.NewAt(fieldType, fieldAddr)
+			fieldPtr.Elem().Set(reflect.ValueOf(valueWrapper.goObj).Elem())
 		}
 		return 0
 	}
 
 	if !ToValue(FromPy(value), field) {
-		SetError(fmt.Errorf("failed to convert value to %s", methodMeta.typ))
+		SetTypeError(fmt.Errorf("failed to convert value to %s", methodMeta.typ))
 		return -1
 	}
 	return 0

@@ -135,7 +135,7 @@ func TestDictDel(t *testing.T) {
 	dict.Del(key)
 
 	// After deletion, the key should not exist
-	if dict.Has(key) {
+	if dict.HasKey(key) {
 		t.Errorf("After deletion, key %v should not exist", key)
 	}
 }
@@ -155,14 +155,14 @@ func TestDictForEach(t *testing.T) {
 		"key3": "value3",
 	}
 
-	dict.ForEach(func(key, value Object) {
+	for key, value := range dict.Items() {
 		count++
 		k := key.String()
 		v := value.String()
 		if expectedVal, ok := expectedPairs[k]; !ok || expectedVal != v {
 			t.Errorf("ForEach() unexpected pair: %v: %v", k, v)
 		}
-	})
+	}
 
 	if count != len(expectedPairs) {
 		t.Errorf("ForEach() visited %d pairs, want %d", count, len(expectedPairs))

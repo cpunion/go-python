@@ -149,14 +149,15 @@ func ToValue(obj Object, v reflect.Value) bool {
 			t := v.Type()
 			v.Set(reflect.MakeMap(t))
 			dict := Cast[Dict](obj)
-			dict.ForEach(func(key, value Object) {
+			for key, value := range dict.Items() {
 				vk := reflect.New(t.Key()).Elem()
 				vv := reflect.New(t.Elem()).Elem()
 				if !ToValue(key, vk) || !ToValue(value, vv) {
-					panic(fmt.Errorf("failed to convert key or value to %v", t.Key()))
+					return false
 				}
 				v.SetMapIndex(vk, vv)
-			})
+			}
+			return true
 		} else {
 			return false
 		}
@@ -167,9 +168,13 @@ func ToValue(obj Object, v reflect.Value) bool {
 			for i := 0; i < t.NumField(); i++ {
 				field := t.Field(i)
 				key := goNameToPythonName(field.Name)
+				if !dict.HasKey(MakeStr(key)) {
+					continue
+				}
 				value := dict.Get(MakeStr(key))
 				if !ToValue(value, v.Field(i)) {
-					panic(fmt.Errorf("failed to convert value to %v", field.Name))
+					SetTypeError(fmt.Errorf("failed to convert value to %v", field.Name))
+					return false
 				}
 			}
 		} else {
