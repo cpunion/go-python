@@ -15,6 +15,7 @@ import (
 // the Python Object's DecRef method during garbage collection.
 type pyObject struct {
 	obj *C.PyObject
+	g   *globalData
 }
 
 func (obj *pyObject) Obj() *PyObject {
@@ -54,9 +55,9 @@ func newObject(obj *PyObject) Object {
 		C.PyErr_Print()
 		panic("nil Python object")
 	}
-	o := &pyObject{obj: obj}
+	o := &pyObject{obj: obj, g: getGlobalData()}
 	runtime.SetFinalizer(o, func(o *pyObject) {
-		getGlobalData().addDecRef(o.obj)
+		o.g.addDecRef(o.obj)
 		runtime.SetFinalizer(o, nil)
 	})
 	return Object{o}
