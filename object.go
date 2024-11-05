@@ -286,11 +286,8 @@ func From(v any) Object {
 			if vv.Elem().Type().Kind() == reflect.Struct {
 				maps := getCurrentThreadData()
 				if pyType, ok := maps.pyTypes[vv.Elem().Type()]; ok {
-					ptr := C._PyObject_New((*C.PyTypeObject)(unsafe.Pointer(pyType)))
-					wrapper := (*wrapperType)(unsafe.Pointer(ptr))
-					wrapper.goObj = vv.Interface()
-					wrapper.alloc = false
-					return newObject(ptr)
+					wrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), vv.Interface())
+					return newObject((*C.PyObject)(unsafe.Pointer(wrapper)))
 				}
 			}
 			return From(vv.Elem().Interface())
@@ -426,9 +423,8 @@ func fromSlice(v reflect.Value) List {
 		for i := 0; i < l; i++ {
 			elem := v.Index(i)
 			elemAddr := elem.Addr()
-			wrapper := (*wrapperType)(unsafe.Pointer(C.PyType_GenericAlloc((*C.PyTypeObject)(unsafe.Pointer(pyType)), 0)))
+			wrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), 0)
 			wrapper.goObj = elemAddr.Interface()
-			wrapper.alloc = false
 			C.PyList_SetItem(list.obj, C.Py_ssize_t(i), (*C.PyObject)(unsafe.Pointer(wrapper)))
 		}
 	}
@@ -448,13 +444,10 @@ func fromStruct(v reflect.Value) Object {
 	ty := v.Type()
 	maps := getCurrentThreadData()
 	if typeObj, ok := maps.pyTypes[ty]; ok {
-		ptr := C._PyObject_New((*C.PyTypeObject)(unsafe.Pointer(typeObj)))
-		wrapper := (*wrapperType)(unsafe.Pointer(ptr))
-		newPtr := reflect.New(ty)
-		newPtr.Elem().Set(v)
-		wrapper.goObj = newPtr.Interface()
-		wrapper.alloc = false
-		return newObject(ptr)
+		ptr := reflect.New(ty)
+		ptr.Elem().Set(v)
+		wrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(typeObj)), ptr.Interface())
+		return newObject((*C.PyObject)(unsafe.Pointer(wrapper)))
 	}
 	dict := newDict(C.PyDict_New())
 	for i := 0; i < ty.NumField(); i++ {

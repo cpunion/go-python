@@ -12,9 +12,33 @@ import (
 	"sync"
 )
 
+type holderList struct {
+	head *objectHolder
+}
+
+func (l *holderList) PushFront(holder *objectHolder) {
+	if l.head != nil {
+		l.head.prev = holder
+		holder.next = l.head
+	}
+	l.head = holder
+}
+
+func (l *holderList) Remove(holder *objectHolder) {
+	if holder.prev != nil {
+		holder.prev.next = holder.next
+	} else {
+		l.head = holder.next
+	}
+	if holder.next != nil {
+		holder.next.prev = holder.prev
+	}
+}
+
 type threadData struct {
 	typeMetas map[*C.PyObject]*typeMeta
 	pyTypes   map[reflect.Type]*C.PyObject
+	holders   holderList
 }
 
 var (

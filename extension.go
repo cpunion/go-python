@@ -7,6 +7,7 @@ package gp
 
 #include "wrap.h"
 extern PyObject* wrapperAlloc(PyTypeObject* type, Py_ssize_t size);
+extern void wrapperDealloc(PyObject* self);
 extern int wrapperInit(PyObject* self, PyObject* args);
 static int isModule(PyObject* ob)
 {
@@ -31,17 +32,15 @@ func CreateFunc(name string, fn any, doc string) Func {
 
 type wrapperType struct {
 	PyObject
-	goObj any
-	alloc bool
+	goObj  any
+	holder *objectHolder
 }
 
-type slotMetaType int
-
-const (
-	slotMethod slotMetaType = iota
-	slotGet
-	slotSet
-)
+type objectHolder struct {
+	obj  any
+	prev *objectHolder
+	next *objectHolder
+}
 
 type slotMeta struct {
 	name       string
@@ -49,29 +48,52 @@ type slotMeta struct {
 	fn         any
 	doc        string
 	hasRecv    bool         // whether it has a receiver
-	slotType   slotMetaType // slot type
 	index      int          // used for member type
 	typ        reflect.Type // member/method type
 }
 
 type typeMeta struct {
 	typ     reflect.Type
-	wrapTyp reflect.Type
 	init    *slotMeta
 	methods map[uint]*slotMeta
 }
 
+func allocWrapper(typ *C.PyTypeObject, obj any) *wrapperType {
+	self := C.PyType_GenericAlloc(typ, 0)
+	if self == nil {
+		return nil
+	}
+	wrapper := (*wrapperType)(unsafe.Pointer(self))
+	holder := new(objectHolder)
+	holder.obj = obj
+	maps := getCurrentThreadData()
+	maps.holders.PushFront(holder)
+	wrapper.goObj = holder.obj
+	wrapper.holder = holder
+	return wrapper
+}
+
+func freeWrapper(wrapper *wrapperType) {
+	maps := getCurrentThreadData()
+	maps.holders.Remove(wrapper.holder)
+}
+
 //export wrapperAlloc
 func wrapperAlloc(typ *C.PyTypeObject, size C.Py_ssize_t) *C.PyObject {
-	self := C.PyType_GenericAlloc(typ, size)
-	if self != nil {
-		maps := getCurrentThreadData()
-		meta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(typ))]
-		wrapper := (*wrapperType)(unsafe.Pointer(self))
-		wrapper.goObj = reflect.New(meta.typ).Interface()
-		wrapper.alloc = true
+	maps := getCurrentThreadData()
+	meta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(typ))]
+	wrapper := allocWrapper(typ, reflect.New(meta.typ).Interface())
+	if wrapper == nil {
+		return nil
 	}
-	return self
+	return (*C.PyObject)(unsafe.Pointer(wrapper))
+}
+
+//export wrapperDealloc
+func wrapperDealloc(self *C.PyObject) {
+	wrapper := (*wrapperType)(unsafe.Pointer(self))
+	freeWrapper(wrapper)
+	C.PyObject_Free(unsafe.Pointer(self))
 }
 
 //export wrapperInit
@@ -110,27 +132,23 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 	fieldType := field.Type()
 	if fieldType.Kind() == reflect.Ptr && fieldType.Elem().Kind() == reflect.Struct {
 		if pyType, ok := maps.pyTypes[fieldType.Elem()]; ok {
-			newWrapper := (*wrapperType)(unsafe.Pointer(C.PyType_GenericAlloc((*C.PyTypeObject)(unsafe.Pointer(pyType)), 0)))
+			newWrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), field.Interface())
 			if newWrapper == nil {
 				SetError(fmt.Errorf("failed to allocate wrapper for nested struct pointer"))
 				return nil
 			}
-			newWrapper.goObj = field.Interface()
-			newWrapper.alloc = false
 			return (*C.PyObject)(unsafe.Pointer(newWrapper))
 		}
 	} else if field.Kind() == reflect.Struct {
 		if pyType, ok := maps.pyTypes[field.Type()]; ok {
-			newWrapper := (*wrapperType)(unsafe.Pointer(C.PyType_GenericAlloc((*C.PyTypeObject)(unsafe.Pointer(pyType)), 0)))
+			baseAddr := goPtr.UnsafePointer()
+			fieldAddr := unsafe.Add(baseAddr, typeMeta.typ.Field(methodMeta.index).Offset)
+			fieldPtr := reflect.NewAt(fieldType, fieldAddr).Interface()
+			newWrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), fieldPtr)
 			if newWrapper == nil {
 				SetError(fmt.Errorf("failed to allocate wrapper for nested struct"))
 				return nil
 			}
-			baseAddr := goPtr.UnsafePointer()
-			fieldAddr := unsafe.Add(baseAddr, typeMeta.typ.Field(methodMeta.index).Offset)
-			fieldPtr := reflect.NewAt(fieldType, fieldAddr).Interface()
-			newWrapper.goObj = fieldPtr
-			newWrapper.alloc = false
 			return (*C.PyObject)(unsafe.Pointer(newWrapper))
 		}
 	}
@@ -237,7 +255,7 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 		return nil
 	}
 
-	methodType := reflect.TypeOf(methodMeta.fn)
+	methodType := methodMeta.typ
 	argc := C.PyTuple_Size(args)
 	expectedArgs := methodType.NumIn()
 	hasReceiver := methodMeta.hasRecv
@@ -293,7 +311,7 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 
 			// Handle both pointer and value returns
 			result := results[0]
-			if result.Type() == reflect.PtrTo(typeMeta.typ) {
+			if result.Type() == reflect.PointerTo(typeMeta.typ) {
 				// For pointer constructor, dereference the pointer
 				goObj.Set(result.Elem())
 			} else {
@@ -344,7 +362,6 @@ func getMethods_(t reflect.Type, methods map[uint]*slotMeta) (ret []C.PyMethodDe
 				fn:         method.Func.Interface(),
 				typ:        method.Type,
 				hasRecv:    true,
-				slotType:   slotMethod,
 			}
 
 			methodPtr := C.wrapperMethods[methodId]
@@ -376,49 +393,6 @@ func getMethods(t reflect.Type, methods map[uint]*slotMeta) *C.PyMethodDef {
 	return methodsPtr
 }
 
-// getMemberType returns the C member type for Go types that are compatible with Python/C
-// Returns -1 for incompatible types
-func getMemberType(t reflect.Type) C.int {
-	switch t.Kind() {
-	case reflect.Bool:
-		return C.T_BOOL
-	case reflect.Int8:
-		return C.T_BYTE
-	case reflect.Int16:
-		return C.T_SHORT
-	case reflect.Int32:
-		return C.T_INT
-	case reflect.Int64:
-		return C.T_LONG
-	case reflect.Int:
-		if unsafe.Sizeof(int(0)) == unsafe.Sizeof(int32(0)) {
-			return C.T_INT
-		} else {
-			return C.T_LONG
-		}
-	case reflect.Uint8:
-		return C.T_UBYTE
-	case reflect.Uint16:
-		return C.T_USHORT
-	case reflect.Uint32:
-		return C.T_UINT
-	case reflect.Uint64:
-		return C.T_ULONG
-	case reflect.Uint:
-		if unsafe.Sizeof(uint(0)) == unsafe.Sizeof(uint32(0)) {
-			return C.T_INT
-		} else {
-			return C.T_LONG
-		}
-	case reflect.Float32:
-		return C.T_FLOAT
-	case reflect.Float64:
-		return C.T_DOUBLE
-	default:
-		return -1
-	}
-}
-
 func getGetsets(t reflect.Type, methods map[uint]*slotMeta) (getsets *C.PyGetSetDef) {
 	getsetsList := make([]C.PyGetSetDef, 0)
 
@@ -436,7 +410,6 @@ func getGetsets(t reflect.Type, methods map[uint]*slotMeta) (getsets *C.PyGetSet
 			name:       field.Name,
 			methodName: pythonName,
 			typ:        field.Type,
-			slotType:   slotGet,
 			hasRecv:    false,
 			index:      i,
 		}
@@ -445,7 +418,6 @@ func getGetsets(t reflect.Type, methods map[uint]*slotMeta) (getsets *C.PyGetSet
 			name:       field.Name,
 			methodName: pythonName,
 			typ:        field.Type,
-			slotType:   slotSet,
 			hasRecv:    false,
 			index:      i,
 		}
@@ -490,10 +462,8 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 		return newObject(pyType)
 	}
 
-	wrapper := wrapperType{}
 	meta := &typeMeta{
 		typ:     ty,
-		wrapTyp: reflect.TypeOf(wrapper),
 		methods: make(map[uint]*slotMeta),
 	}
 
@@ -502,6 +472,11 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 	slots = append(slots, C.PyType_Slot{
 		slot:  C.Py_tp_alloc,
 		pfunc: unsafe.Pointer(C.wrapperAlloc),
+	})
+
+	slots = append(slots, C.PyType_Slot{
+		slot:  C.Py_tp_dealloc,
+		pfunc: unsafe.Pointer(C.wrapperDealloc),
 	})
 
 	if init != nil {
@@ -527,7 +502,6 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 				methodName: "__init__",
 				fn:         init,
 				typ:        initType,
-				slotType:   slotMethod,
 				hasRecv:    true,
 			}
 		} else if initType.NumOut() == 1 &&
@@ -539,7 +513,6 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 				methodName: "__init__",
 				fn:         init,
 				typ:        initType,
-				slotType:   slotMethod,
 				hasRecv:    false,
 			}
 		} else {
@@ -561,8 +534,7 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 		*currentSlot = slot
 	}
 
-	// calculate new size: PyObject + pointer size
-	totalSize := unsafe.Sizeof(C.PyObject{}) + unsafe.Sizeof(unsafe.Pointer(nil))
+	totalSize := unsafe.Sizeof(wrapperType{})
 	spec := &C.PyType_Spec{
 		name:      C.CString(name),
 		basicsize: C.int(totalSize),
@@ -644,7 +616,6 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 		fn:         fn,
 		typ:        t,
 		doc:        doc,
-		slotType:   slotMethod,
 		hasRecv:    false,
 	}
 

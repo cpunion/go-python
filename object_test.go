@@ -709,7 +709,6 @@ func TestFromWithCustomType(t *testing.T) {
 		if obj.Type().Obj() != pointClass.Obj() {
 			t.Error("From(Point) created object with wrong type")
 		}
-
 		// Verify the values
 		if obj.AttrLong("x").Int64() != 10 {
 			t.Error("Wrong X value after From conversion")
