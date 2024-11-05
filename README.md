@@ -27,7 +27,7 @@
     - [ ] Default arguments.
 - [ ] Call Go in Python.
   - [x] Export Go functions, struct types to Python.
-  - [ ] Auto export field types if it's a struct.
+  - [x] Auto export field types if it's a struct.
   - [ ] Auto generate function signatures (used by gradio).
 - [x] Basic tests on common used libraries.
   - [x] matplotlib
