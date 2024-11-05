@@ -19,7 +19,7 @@ func TestModuleImport(t *testing.T) {
 	}
 
 	// Verify math module has expected attributes
-	if !modDict.Has("pi") {
+	if !modDict.HasKey("pi") {
 		t.Error("Math module doesn't contain 'pi' constant")
 	}
 }
@@ -63,7 +63,7 @@ func TestCreateModule(t *testing.T) {
 
 	// Verify the object was added
 	modDict := mod.Dict()
-	if !modDict.Has("test_value") {
+	if !modDict.HasKey("test_value") {
 		t.Error("Module doesn't contain added value")
 	}
 
@@ -90,7 +90,7 @@ func TestGetModuleDict(t *testing.T) {
 	}
 
 	// Verify the module is in the module dictionary
-	if !moduleDict.Has("math") {
+	if !moduleDict.HasKey("math") {
 		t.Error("Module dictionary doesn't contain imported module")
 	}
 }

@@ -465,3 +465,375 @@ assert o.inner_list[0].y == "python"
 		t.Fatalf("Test failed: %v", err)
 	}
 }
+
+func TestSetterMethodEdgeCases(t *testing.T) {
+	setupTest(t)
+
+	type ChildStruct struct {
+		Value int
+	}
+
+	type ParentStruct struct {
+		unexported int
+		Value      int
+		Child      *ChildStruct
+		Nested     ChildStruct
+	}
+
+	m := MainModule()
+	m.AddType(ChildStruct{}, nil, "ChildStruct", "")
+	m.AddType(ParentStruct{}, nil, "ParentStruct", "")
+
+	code := `
+obj = ParentStruct()
+try:
+    obj.value = "invalid"  # Try to set int with string
+    assert False, "Should have raised TypeError"
+except TypeError:
+    pass
+
+try:
+    obj.child = 123  # Try to set struct pointer with int
+    assert False, "Should have raised TypeError"
+except TypeError:
+    pass
+
+try:
+    obj.nested = 123  # Try to set struct with int
+    assert False, "Should have raised TypeError"
+except TypeError:
+    pass
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetterMethodEdgeCases(t *testing.T) {
+	setupTest(t)
+
+	type ChildStruct struct {
+		Value int
+	}
+
+	type ParentStruct struct {
+		Value  int
+		Child  *ChildStruct
+		Nested ChildStruct
+	}
+
+	m := MainModule()
+	m.AddType(ChildStruct{}, nil, "ChildStruct", "")
+	m.AddType(ParentStruct{}, nil, "ParentStruct", "")
+
+	code := `
+obj = ParentStruct()
+obj.child = None  # Set pointer to nil
+val = obj.child   # Should return None for nil pointer
+assert val is None
+
+obj.nested = ChildStruct()  # Set nested struct
+val = obj.nested  # Should return wrapper for nested struct
+assert isinstance(val, ChildStruct)
+
+# Test accessing nested struct fields
+obj.nested.value = 42
+assert obj.nested.value == 42
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWrapperMethodEdgeCases(t *testing.T) {
+	setupTest(t)
+
+	type TestStruct struct {
+		Value int
+	}
+
+	m := MainModule()
+
+	// Test method with wrong number of arguments
+	m.AddMethod("test_func", func(x int, y int) int { return x + y }, "")
+
+	code := `
+try:
+    test_func(1)  # Missing argument
+    assert False, "Should have raised TypeError"
+except TypeError:
+    pass
+
+try:
+    test_func(1, 2, 3)  # Too many arguments
+    assert False, "Should have raised TypeError"
+except TypeError:
+    pass
+
+try:
+    test_func("invalid", 2)  # Invalid argument type
+    assert False, "Should have raised TypeError"
+except TypeError:
+    pass
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAddTypeEdgeCases(t *testing.T) {
+	setupTest(t)
+
+	// Test adding non-struct type
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected panic when adding non-struct type")
+		}
+	}()
+
+	m := MainModule()
+	m.AddType(123, nil, "NotAStruct", "")
+}
+
+func TestInitFunctionEdgeCases(t *testing.T) {
+	setupTest(t)
+
+	type TestStruct struct {
+		Value int
+	}
+
+	// Test init function with invalid signature
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Expected panic when using invalid init function")
+		}
+	}()
+
+	m := MainModule()
+	invalidInit := func(x string) string { return x } // Wrong signature
+	m.AddType(TestStruct{}, invalidInit, "TestStruct", "")
+}
+
+func TestNestedStructRegistration(t *testing.T) {
+	setupTest(t)
+
+	type NestedStruct struct {
+		Value int
+	}
+
+	type ParentStruct struct {
+		Nested    NestedStruct
+		NestedPtr *NestedStruct
+	}
+
+	m := MainModule()
+	m.AddType(ParentStruct{}, nil, "ParentStruct", "")
+
+	code := `
+parent = ParentStruct()
+assert hasattr(parent, "nested")
+assert hasattr(parent, "nested_ptr")
+
+# Test nested struct manipulation
+parent.nested.value = 42
+assert parent.nested.value == 42
+
+parent.nested_ptr = None
+assert parent.nested_ptr is None
+
+# Create and assign new nested struct
+parent.nested_ptr = NestedStruct()
+parent.nested_ptr.value = 100
+assert parent.nested_ptr.value == 100
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAddTypeWithPointerArg(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	type TestStruct struct {
+		Value int
+	}
+
+	// Test adding type with pointer argument
+	typ1 := m.AddType(&TestStruct{}, nil, "TestStruct", "")
+	if typ1.Nil() {
+		t.Fatal("Failed to create type with pointer argument")
+	}
+
+	code := `
+obj = TestStruct()
+obj.value = 42
+assert obj.value == 42
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAddTypeDuplicate(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	type TestStruct struct {
+		Value int
+	}
+
+	// First registration
+	typ1 := m.AddType(TestStruct{}, nil, "TestStruct", "")
+	if typ1.Nil() {
+		t.Fatal("Failed to create type on first registration")
+	}
+
+	// Second registration should return the same type object
+	typ2 := m.AddType(TestStruct{}, nil, "TestStruct", "")
+	if typ2.Nil() {
+		t.Fatal("Failed to get type on second registration")
+	}
+
+	if typ1.Obj() != typ2.Obj() {
+		t.Fatal("Expected same type object on second registration")
+	}
+
+	// Both types should work with the same underlying Go type
+	code := `
+obj1 = TestStruct()
+obj1.value = 42
+assert obj1.value == 42
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Also test with pointer argument
+	typ3 := m.AddType(&TestStruct{}, nil, "TestStruct3", "")
+	if typ3.Nil() {
+		t.Fatal("Failed to get type on registration with pointer")
+	}
+
+	if typ1.Obj() != typ3.Obj() {
+		t.Fatal("Expected same type object on second registration")
+	}
+}
+
+func TestStructPointerFieldDictAssignment(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	type NestedStruct struct {
+		IntVal    int
+		StringVal string
+	}
+
+	type ParentStruct struct {
+		PtrField *NestedStruct
+	}
+
+	m.AddType(ParentStruct{}, nil, "ParentStruct", "")
+
+	// Test assigning dict to nil pointer field
+	code := `
+obj = ParentStruct()
+# Initially the pointer should be nil
+assert obj.ptr_field is None
+
+# Assign dict to nil pointer field
+obj.ptr_field = {"int_val": 42, "string_val": "hello"}
+assert obj.ptr_field.int_val == 42
+assert obj.ptr_field.string_val == "hello"
+
+# Test invalid dict value type
+try:
+    obj.ptr_field = {"int_val": "not an int", "string_val": "hello"}
+    assert False, "Should have raised TypeError for invalid int_val"
+except TypeError:
+    pass
+
+# Test completely wrong type
+try:
+    obj.ptr_field = ["not", "a", "dict"]
+    assert False, "Should have raised TypeError for list"
+except TypeError:
+    pass
+
+# Test nested dict with wrong type
+try:
+    obj.ptr_field = {"int_val": {"nested": "dict"}, "string_val": "hello"}
+    assert False, "Should have raised TypeError for nested dict"
+except TypeError:
+    pass
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStructFieldDictAssignment(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	type NestedStruct struct {
+		IntVal    int
+		StringVal string
+	}
+
+	type ParentStruct struct {
+		Field NestedStruct
+	}
+
+	m.AddType(ParentStruct{}, nil, "ParentStruct", "")
+
+	// Test assigning dict to struct field
+	code := `
+obj = ParentStruct()
+
+# Assign valid dict
+obj.field = {"int_val": 42, "string_val": "hello"}
+assert obj.field.int_val == 42
+assert obj.field.string_val == "hello"
+
+# Test invalid value type
+try:
+    obj.field = {"int_val": "not an int", "string_val": "hello"}
+    assert False, "Should have raised TypeError for invalid int_val"
+except TypeError:
+    pass
+
+# Test completely wrong type
+try:
+    obj.field = ["not", "a", "dict"]
+    assert False, "Should have raised TypeError for list"
+except TypeError:
+    pass
+
+# Test nested dict with wrong type
+try:
+    obj.field = {"int_val": {"nested": "dict"}, "string_val": "hello"}
+    assert False, "Should have raised TypeError for nested dict"
+except TypeError:
+    pass
+
+# Test with complex nested structure
+obj.field = {
+    "int_val": 100,
+    "string_val": "test"
+}
+assert obj.field.int_val == 100
+assert obj.field.string_val == "test"
+`
+	err := RunString(code)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

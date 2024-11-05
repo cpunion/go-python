@@ -38,7 +38,7 @@ func MakeDict(m map[any]any) Dict {
 	return dict
 }
 
-func (d Dict) Has(key any) bool {
+func (d Dict) HasKey(key any) bool {
 	keyObj := From(key)
 	return C.PyDict_Contains(d.obj, keyObj.obj) != 0
 }
@@ -75,22 +75,26 @@ func (d Dict) Del(key Objecter) {
 	C.PyDict_DelItem(d.obj, key.Obj())
 }
 
-func (d Dict) ForEach(fn func(key, value Object)) {
-	items := C.PyDict_Items(d.obj)
-	check(items != nil, "failed to get items of dict")
-	defer C.Py_DecRef(items)
-	iter := C.PyObject_GetIter(items)
-	for {
-		item := C.PyIter_Next(iter)
-		if item == nil {
-			break
+func (d Dict) Items() func(fn func(key, value Object) bool) {
+	return func(fn func(key, value Object) bool) {
+		items := C.PyDict_Items(d.obj)
+		check(items != nil, "failed to get items of dict")
+		defer C.Py_DecRef(items)
+		iter := C.PyObject_GetIter(items)
+		for {
+			item := C.PyIter_Next(iter)
+			if item == nil {
+				break
+			}
+			C.Py_IncRef(item)
+			key := C.PyTuple_GetItem(item, 0)
+			value := C.PyTuple_GetItem(item, 1)
+			C.Py_IncRef(key)
+			C.Py_IncRef(value)
+			C.Py_DecRef(item)
+			if !fn(newObject(key), newObject(value)) {
+				break
+			}
 		}
-		C.Py_IncRef(item)
-		key := C.PyTuple_GetItem(item, 0)
-		value := C.PyTuple_GetItem(item, 1)
-		C.Py_IncRef(key)
-		C.Py_IncRef(value)
-		C.Py_DecRef(item)
-		fn(newObject(key), newObject(value))
 	}
 }
