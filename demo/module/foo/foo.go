@@ -3,7 +3,7 @@ package foo
 import (
 	"fmt"
 
-	gp "github.com/cpunion/go-python"
+	. "github.com/cpunion/go-python"
 )
 
 type Point struct {
@@ -34,11 +34,11 @@ func Add(a, b int) int {
 	return a + b
 }
 
-func InitFooModule() gp.Module {
-	m := gp.CreateModule("foo")
+func InitFooModule() Module {
+	m := CreateModule("foo")
 	// Add the function to the module
 	m.AddMethod("add", Add, "(a, b) -> float\n--\n\nAdd two integers.")
 	// Add the type to the module
-	gp.AddType[Point](m, (*Point).init, "Point", "Point objects")
+	m.AddType(Point{}, (*Point).init, "Point", "Point objects")
 	return m
 }

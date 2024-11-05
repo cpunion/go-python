@@ -1,16 +1,16 @@
 package main
 
-import gp "github.com/cpunion/go-python"
+import . "github.com/cpunion/go-python"
 
 type plt struct {
-	gp.Module
+	Module
 }
 
 func Plt() plt {
-	return plt{gp.ImportModule("matplotlib.pyplot")}
+	return plt{ImportModule("matplotlib.pyplot")}
 }
 
-func (m plt) Plot(args ...any) gp.Object {
+func (m plt) Plot(args ...any) Object {
 	return m.Call("plot", args...)
 }
 
@@ -19,9 +19,9 @@ func (m plt) Show() {
 }
 
 func main() {
-	gp.Initialize()
-	defer gp.Finalize()
+	Initialize()
+	defer Finalize()
 	plt := Plt()
-	plt.Plot([]int{5, 10}, []int{10, 15}, gp.KwArgs{"color": "red"})
+	plt.Plot([]int{5, 10}, []int{10, 15}, KwArgs{"color": "red"})
 	plt.Show()
 }

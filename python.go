@@ -7,7 +7,6 @@ package gp
 import "C"
 import (
 	"fmt"
-	"reflect"
 	"runtime"
 	"unsafe"
 )
@@ -18,13 +17,14 @@ type PyCFunction = C.PyCFunction
 func Initialize() {
 	runtime.LockOSThread()
 	C.Py_Initialize()
+	initGlobal()
 }
 
 func Finalize() {
+	markFinished()
 	r := C.Py_FinalizeEx()
+	cleanupGlobal()
 	check(r == 0, "failed to finalize Python")
-	typeMetaMap = make(map[*C.PyObject]*typeMeta)
-	pyTypeMap = make(map[reflect.Type]*C.PyObject)
 }
 
 // ----------------------------------------------------------------------------

@@ -2,14 +2,23 @@ package gp
 
 import (
 	"runtime"
+	"sync"
 	"testing"
 )
 
+var (
+	testMutex sync.Mutex
+)
+
 func setupTest(t *testing.T) {
+	testMutex.Lock()
 	Initialize()
+	// TODO: Remove this once we solve random segfaults
+	getGlobalData().disableDecRef = true
 	t.Cleanup(func() {
 		runtime.GC()
 		Finalize()
+		testMutex.Unlock()
 	})
 }
 

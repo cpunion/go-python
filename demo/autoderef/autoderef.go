@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"runtime"
 
-	gp "github.com/cpunion/go-python"
+	. "github.com/cpunion/go-python"
 	pymath "github.com/cpunion/go-python/math"
 )
 
 func main() {
-	gp.Initialize()
-	defer gp.Finalize()
+	Initialize()
+	defer Finalize()
 
 	pythonCode := `
 def allocate_memory():
@@ -27,16 +27,16 @@ for i in range(10):
     memory_allocation_test()
 `
 
-	mod := gp.ImportModule("__main__")
+	mod := ImportModule("__main__")
 	gbl := mod.Dict()
-	code, err := gp.CompileString(pythonCode, "<string>", gp.FileInput)
+	code, err := CompileString(pythonCode, "<string>", FileInput)
 	if err != nil {
 		fmt.Printf("Failed to compile Python code: %v\n", err)
 		return
 	}
-	_ = gp.EvalCode(code, gbl, gp.Nil().AsDict())
+	_ = EvalCode(code, gbl, Nil().AsDict())
 	for i := 0; i < 10; i++ {
-		result := gp.EvalCode(code, gbl, gp.Nil().AsDict())
+		result := EvalCode(code, gbl, Nil().AsDict())
 		if result.Nil() {
 			fmt.Printf("Failed to execute Python code\n")
 			return
@@ -54,7 +54,7 @@ for i in range(10):
 	}
 
 	for i := 1; i <= 1000000; i++ {
-		f := gp.MakeFloat(float64(i))
+		f := MakeFloat(float64(i))
 		_ = pymath.Sqrt(f)
 		if i%10000 == 0 {
 			fmt.Printf("Iteration %d in go\n", i)

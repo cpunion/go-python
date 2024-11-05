@@ -25,28 +25,28 @@ func TestMakeStr(t *testing.T) {
 			input:     "hello",
 			expected:  "hello",
 			length:    5,
-			byteCount: 5, // ASCII字符每个占1字节
+			byteCount: 5, // ASCII character each takes 1 byte
 		},
 		{
 			name:      "unicode string",
 			input:     "你好世界",
 			expected:  "你好世界",
 			length:    4,
-			byteCount: 12, // 中文字符每个占3字节
+			byteCount: 12, // Chinese character each takes 3 bytes
 		},
 		{
 			name:      "mixed string",
 			input:     "hello世界",
 			expected:  "hello世界",
 			length:    7,
-			byteCount: 11, // 5个ASCII字符(5字节) + 2个中文字符(6字节)
+			byteCount: 11, // 5 ASCII characters (5 bytes) + 2 Chinese characters (6 bytes)
 		},
 		{
 			name:      "special unicode",
 			input:     "π∑€",
 			expected:  "π∑€",
 			length:    3,
-			byteCount: 8, // π(2字节) + ∑(3字节) + €(3字节) = 8字节
+			byteCount: 8, // π(2bytes) + ∑(3bytes) + €(3bytes) = 8bytes
 		},
 	}
 

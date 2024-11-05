@@ -39,17 +39,17 @@ See the [examples](demo).
 
 ### Hello World: Plot a line
 
-```go
-// demo/plot/plot.go
+<!-- embedme demo/plot/plot.go -->
 
+```go
 package main
 
-import gp "github.com/cpunion/go-python"
+import . "github.com/cpunion/go-python"
 
 func main() {
-	gp.Initialize()
-	plt := gp.ImportModule("matplotlib.pyplot")
-	plt.Call("plot", gp.MakeTuple(5, 10), gp.MakeTuple(10, 15), gp.KwArgs{"color": "red"})
+	Initialize()
+	plt := ImportModule("matplotlib.pyplot")
+	plt.Call("plot", MakeTuple(5, 10), MakeTuple(10, 15), KwArgs{"color": "red"})
 	plt.Call("show")
 }
 
@@ -57,22 +57,22 @@ func main() {
 
 ### Typed Python Objects
 
-```go
-// demo/plot2/plot2.go
+<!-- embedme demo/plot2/plot2.go -->
 
+```go
 package main
 
-import gp "github.com/cpunion/go-python"
+import . "github.com/cpunion/go-python"
 
 type plt struct {
-	gp.Module
+	Module
 }
 
 func Plt() plt {
-	return plt{gp.ImportModule("matplotlib.pyplot")}
+	return plt{ImportModule("matplotlib.pyplot")}
 }
 
-func (m plt) Plot(args ...any) gp.Object {
+func (m plt) Plot(args ...any) Object {
 	return m.Call("plot", args...)
 }
 
@@ -81,10 +81,10 @@ func (m plt) Show() {
 }
 
 func main() {
-	gp.Initialize()
-	defer gp.Finalize()
+	Initialize()
+	defer Finalize()
 	plt := Plt()
-	plt.Plot([]int{5, 10}, []int{10, 15}, gp.KwArgs{"color": "red"})
+	plt.Plot([]int{5, 10}, []int{10, 15}, KwArgs{"color": "red"})
 	plt.Show()
 }
 
@@ -92,15 +92,15 @@ func main() {
 
 ### Define Python Objects with Go
 
-```go
-// demo/module/foo/foo.go
+<!-- embedme demo/module/foo/foo.go -->
 
+```go
 package foo
 
 import (
 	"fmt"
 
-	gp "github.com/cpunion/go-python"
+	. "github.com/cpunion/go-python"
 )
 
 type Point struct {
@@ -131,12 +131,12 @@ func Add(a, b int) int {
 	return a + b
 }
 
-func InitFooModule() gp.Module {
-	m := gp.CreateModule("foo")
+func InitFooModule() Module {
+	m := CreateModule("foo")
 	// Add the function to the module
 	m.AddMethod("add", Add, "(a, b) -> float\n--\n\nAdd two integers.")
 	// Add the type to the module
-	gp.AddType[Point](m, (*Point).init, "Point", "Point objects")
+	m.AddType(Point{}, (*Point).init, "Point", "Point objects")
 	return m
 }
 
@@ -144,34 +144,34 @@ func InitFooModule() gp.Module {
 
 Call foo module from Python and Go.
 
-```go
-// demo/module/module.go
+<!-- embedme demo/module/module.go -->
 
+```go
 package main
 
 import (
 	"fmt"
 
-	gp "github.com/cpunion/go-python"
+	. "github.com/cpunion/go-python"
 	"github.com/cpunion/go-python/demo/module/foo"
 )
 
 func main() {
-	gp.Initialize()
-	defer gp.Finalize()
+	Initialize()
+	defer Finalize()
 	fooMod := foo.InitFooModule()
-	gp.GetModuleDict().SetString("foo", fooMod)
+	GetModuleDict().SetString("foo", fooMod)
 
 	Main1(fooMod)
 	Main2()
 }
 
-func Main1(fooMod gp.Module) {
+func Main1(fooMod Module) {
 	sum := fooMod.Call("add", 1, 2).AsLong()
 	fmt.Printf("Sum of 1 + 2: %d\n", sum.Int64())
 
 	dict := fooMod.Dict()
-	Point := dict.Get(gp.MakeStr("Point")).AsFunc()
+	Point := dict.Get(MakeStr("Point")).AsFunc()
 
 	point := Point.Call(3, 4)
 	fmt.Printf("dir(point): %v\n", point.Dir())
@@ -191,7 +191,7 @@ func Main1(fooMod gp.Module) {
 
 func Main2() {
 	fmt.Printf("=========== Main2 ==========\n")
-	_ = gp.RunString(`
+	_ = RunString(`
 import foo
 point = foo.Point(3, 4)
 print("dir(point):", dir(point))
@@ -213,15 +213,15 @@ point.print()
 
 ### Call gradio
 
-```go
-// demo/gradio/gradio.go
+<!-- embedme demo/gradio/gradio.go -->
 
+```go
 package main
 
 import (
 	"os"
 
-	gp "github.com/cpunion/go-python"
+	. "github.com/cpunion/go-python"
 )
 
 /*
@@ -243,16 +243,16 @@ with gr.Blocks() as demo:
 demo.launch()
 */
 
-var gr gp.Module
+var gr Module
 
-func UpdateExamples(country string) gp.Object {
+func UpdateExamples(country string) Object {
 	println("country:", country)
 	if country == "USA" {
-		return gr.Call("Dataset", gp.KwArgs{
+		return gr.Call("Dataset", KwArgs{
 			"samples": [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}},
 		})
 	} else {
-		return gr.Call("Dataset", gp.KwArgs{
+		return gr.Call("Dataset", KwArgs{
 			"samples": [][]string{{"Islamabad"}, {"Karachi"}, {"Lahore"}},
 		})
 	}
@@ -264,15 +264,15 @@ func main() {
 		return
 	}
 
-	gp.Initialize()
-	defer gp.Finalize()
-	gr = gp.ImportModule("gradio")
-	fn := gp.CreateFunc(UpdateExamples,
+	Initialize()
+	defer Finalize()
+	gr = ImportModule("gradio")
+	fn := CreateFunc("update_examples", UpdateExamples,
 		"(country, /)\n--\n\nUpdate examples based on country")
 	// Would be (in the future):
-	// fn := gp.FuncOf(UpdateExamples)
-	demo := gp.With(gr.Call("Blocks"), func(v gp.Object) {
-		dropdown := gr.Call("Dropdown", gp.KwArgs{
+	// fn := FuncOf(UpdateExamples)
+	demo := With(gr.Call("Blocks"), func(v Object) {
+		dropdown := gr.Call("Dropdown", KwArgs{
 			"label":   "Country",
 			"choices": []string{"USA", "Pakistan"},
 			"value":   "USA",

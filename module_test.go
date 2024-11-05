@@ -6,9 +6,6 @@ import (
 
 func TestModuleImport(t *testing.T) {
 	setupTest(t)
-	Initialize()
-	defer Finalize()
-
 	// Test importing a built-in module
 	mathMod := ImportModule("math")
 	if mathMod.Nil() {
@@ -29,9 +26,6 @@ func TestModuleImport(t *testing.T) {
 
 func TestGetModule(t *testing.T) {
 	setupTest(t)
-	Initialize()
-	defer Finalize()
-
 	// First import the module
 	sysModule := ImportModule("sys")
 	if sysModule.Nil() {
@@ -52,8 +46,6 @@ func TestGetModule(t *testing.T) {
 
 func TestCreateModule(t *testing.T) {
 	setupTest(t)
-	Initialize()
-	defer Finalize()
 
 	// Create a new module
 	modName := "test_module"
@@ -84,8 +76,6 @@ func TestCreateModule(t *testing.T) {
 
 func TestGetModuleDict(t *testing.T) {
 	setupTest(t)
-	Initialize()
-	defer Finalize()
 
 	// Get the module dictionary
 	moduleDict := GetModuleDict()
