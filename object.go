@@ -18,19 +18,19 @@ type pyObject struct {
 	g   *globalData
 }
 
-func (obj *pyObject) Obj() *PyObject {
-	if obj == nil {
+func (o *pyObject) Obj() *PyObject {
+	if o == nil {
 		return nil
 	}
-	return obj.obj
+	return o.obj
 }
 
-func (obj *pyObject) Nil() bool {
-	return obj == nil
+func (o *pyObject) Nil() bool {
+	return o == nil
 }
 
-func (obj *pyObject) Ensure() {
-	if obj == nil {
+func (o *pyObject) Ensure() {
+	if o == nil {
 		C.PyErr_Print()
 		panic("nil Python object")
 	}
@@ -46,8 +46,8 @@ func FromPy(obj *PyObject) Object {
 	return newObject(obj)
 }
 
-func (obj Object) object() Object {
-	return obj
+func (o Object) object() Object {
+	return o
 }
 
 func newObjectRef(obj *PyObject) Object {
@@ -68,147 +68,147 @@ func newObject(obj *PyObject) Object {
 	return Object{o}
 }
 
-func (obj Object) Dir() List {
-	return obj.Call("__dir__").AsList()
+func (o Object) Dir() List {
+	return o.Call("__dir__").AsList()
 }
 
-func (obj Object) Equals(other Objecter) bool {
-	return C.PyObject_RichCompareBool(obj.obj, other.Obj(), C.Py_EQ) != 0
+func (o Object) Equals(other Objecter) bool {
+	return C.PyObject_RichCompareBool(o.obj, other.Obj(), C.Py_EQ) != 0
 }
 
-func (obj Object) Attr(name string) Object {
+func (o Object) Attr(name string) Object {
 	cname := AllocCStr(name)
-	o := C.PyObject_GetAttrString(obj.obj, cname)
+	attr := C.PyObject_GetAttrString(o.obj, cname)
 	C.free(unsafe.Pointer(cname))
-	return newObject(o)
+	return newObject(attr)
 }
 
-func (obj Object) AttrFloat(name string) Float {
-	return obj.Attr(name).AsFloat()
+func (o Object) AttrFloat(name string) Float {
+	return o.Attr(name).AsFloat()
 }
 
-func (obj Object) AttrLong(name string) Long {
-	return obj.Attr(name).AsLong()
+func (o Object) AttrLong(name string) Long {
+	return o.Attr(name).AsLong()
 }
 
-func (obj Object) AttrString(name string) Str {
-	return obj.Attr(name).AsStr()
+func (o Object) AttrString(name string) Str {
+	return o.Attr(name).AsStr()
 }
 
-func (obj Object) AttrBytes(name string) Bytes {
-	return obj.Attr(name).AsBytes()
+func (o Object) AttrBytes(name string) Bytes {
+	return o.Attr(name).AsBytes()
 }
 
-func (obj Object) AttrBool(name string) Bool {
-	return obj.Attr(name).AsBool()
+func (o Object) AttrBool(name string) Bool {
+	return o.Attr(name).AsBool()
 }
 
-func (obj Object) AttrDict(name string) Dict {
-	return obj.Attr(name).AsDict()
+func (o Object) AttrDict(name string) Dict {
+	return o.Attr(name).AsDict()
 }
 
-func (obj Object) AttrList(name string) List {
-	return obj.Attr(name).AsList()
+func (o Object) AttrList(name string) List {
+	return o.Attr(name).AsList()
 }
 
-func (obj Object) AttrTuple(name string) Tuple {
-	return obj.Attr(name).AsTuple()
+func (o Object) AttrTuple(name string) Tuple {
+	return o.Attr(name).AsTuple()
 }
 
-func (obj Object) AttrFunc(name string) Func {
-	return obj.Attr(name).AsFunc()
+func (o Object) AttrFunc(name string) Func {
+	return o.Attr(name).AsFunc()
 }
 
-func (obj Object) SetAttr(name string, value any) {
+func (o Object) SetAttr(name string, value any) {
 	cname := AllocCStr(name)
-	r := C.PyObject_SetAttrString(obj.obj, cname, From(value).obj)
+	r := C.PyObject_SetAttrString(o.obj, cname, From(value).obj)
 	C.PyErr_Print()
 	check(r == 0, fmt.Sprintf("failed to set attribute %s", name))
 	C.free(unsafe.Pointer(cname))
 }
 
-func (obj Object) IsLong() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyLong_Type) != 0
+func (o Object) IsLong() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyLong_Type) != 0
 }
 
-func (obj Object) IsFloat() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyFloat_Type) != 0
+func (o Object) IsFloat() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyFloat_Type) != 0
 }
 
-func (obj Object) IsComplex() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyComplex_Type) != 0
+func (o Object) IsComplex() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyComplex_Type) != 0
 }
 
-func (obj Object) IsStr() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyUnicode_Type) != 0
+func (o Object) IsStr() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyUnicode_Type) != 0
 }
 
-func (obj Object) IsBytes() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyBytes_Type) != 0
+func (o Object) IsBytes() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyBytes_Type) != 0
 }
 
-func (obj Object) IsBool() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyBool_Type) != 0
+func (o Object) IsBool() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyBool_Type) != 0
 }
 
-func (obj Object) IsList() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyList_Type) != 0
+func (o Object) IsList() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyList_Type) != 0
 }
 
-func (obj Object) IsTuple() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyTuple_Type) != 0
+func (o Object) IsTuple() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyTuple_Type) != 0
 }
 
-func (obj Object) IsDict() bool {
-	return C.Py_IS_TYPE(obj.obj, &C.PyDict_Type) != 0
+func (o Object) IsDict() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyDict_Type) != 0
 }
 
-func (obj Object) AsFloat() Float {
-	return Cast[Float](obj)
+func (o Object) AsFloat() Float {
+	return cast[Float](o)
 }
 
-func (obj Object) AsLong() Long {
-	return Cast[Long](obj)
+func (o Object) AsLong() Long {
+	return cast[Long](o)
 }
 
-func (obj Object) AsComplex() Complex {
-	return Cast[Complex](obj)
+func (o Object) AsComplex() Complex {
+	return cast[Complex](o)
 }
 
-func (obj Object) AsStr() Str {
-	return Cast[Str](obj)
+func (o Object) AsStr() Str {
+	return cast[Str](o)
 }
 
-func (obj Object) AsBytes() Bytes {
-	return Cast[Bytes](obj)
+func (o Object) AsBytes() Bytes {
+	return cast[Bytes](o)
 }
 
-func (obj Object) AsBool() Bool {
-	return Cast[Bool](obj)
+func (o Object) AsBool() Bool {
+	return cast[Bool](o)
 }
 
-func (obj Object) AsDict() Dict {
-	return Cast[Dict](obj)
+func (o Object) AsDict() Dict {
+	return cast[Dict](o)
 }
 
-func (obj Object) AsList() List {
-	return Cast[List](obj)
+func (o Object) AsList() List {
+	return cast[List](o)
 }
 
-func (obj Object) AsTuple() Tuple {
-	return Cast[Tuple](obj)
+func (o Object) AsTuple() Tuple {
+	return cast[Tuple](o)
 }
 
-func (obj Object) AsFunc() Func {
-	return Cast[Func](obj)
+func (o Object) AsFunc() Func {
+	return cast[Func](o)
 }
 
-func (obj Object) AsModule() Module {
-	return Cast[Module](obj)
+func (o Object) AsModule() Module {
+	return cast[Module](o)
 }
 
-func (obj Object) Call(name string, args ...any) Object {
-	fn := Cast[Func](obj.Attr(name))
+func (o Object) Call(name string, args ...any) Object {
+	fn := cast[Func](o.Attr(name))
 	argsTuple, kwArgs := splitArgs(args...)
 	if kwArgs == nil {
 		return fn.CallObject(argsTuple)
@@ -217,21 +217,21 @@ func (obj Object) Call(name string, args ...any) Object {
 	}
 }
 
-func (obj Object) Repr() string {
-	return newStr(C.PyObject_Repr(obj.obj)).String()
+func (o Object) Repr() string {
+	return newStr(C.PyObject_Repr(o.obj)).String()
 }
 
-func (obj Object) Type() Object {
-	return newObject(C.PyObject_Type(obj.Obj()))
+func (o Object) Type() Object {
+	return newObject(C.PyObject_Type(o.Obj()))
 }
 
-func (obj Object) String() string {
-	return newStr(C.PyObject_Str(obj.obj)).String()
+func (o Object) String() string {
+	return newStr(C.PyObject_Str(o.obj)).String()
 }
 
-func (obj Object) Obj() *PyObject {
-	if obj.Nil() {
+func (o Object) Obj() *PyObject {
+	if o.Nil() {
 		return nil
 	}
-	return obj.pyObject.obj
+	return o.obj
 }

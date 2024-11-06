@@ -22,7 +22,7 @@ func BytesFromStr(s string) Bytes {
 
 func MakeBytes(bytes []byte) Bytes {
 	ptr := C.CBytes(bytes)
-	o := C.PyBytes_FromStringAndSize((*C.char)(ptr), C.Py_ssize_t(len(bytes)))
+	o := C.PyBytes_FromStringAndSize((*Char)(ptr), C.Py_ssize_t(len(bytes)))
 	C.free(unsafe.Pointer(ptr))
 	return newBytes(o)
 }
@@ -34,5 +34,5 @@ func (b Bytes) Bytes() []byte {
 }
 
 func (b Bytes) Decode(encoding string) Str {
-	return Cast[Str](b.Call("decode", MakeStr(encoding)))
+	return cast[Str](b.Call("decode", MakeStr(encoding)))
 }

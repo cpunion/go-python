@@ -28,6 +28,6 @@ func (f Float) Float32() float32 {
 }
 
 func (f Float) IsInteger() Bool {
-	fn := Cast[Func](f.Attr("is_integer"))
-	return Cast[Bool](fn.callNoArgs())
+	fn := cast[Func](f.Attr("is_integer"))
+	return cast[Bool](fn.callNoArgs())
 }
