@@ -14,7 +14,7 @@
 - Typed Python objects.
 - Most intuitive and easy to use.
 
-## Roadmap
+## Features
 
 - [x] Call Python in Go.
   - [x] Basic types.
@@ -38,6 +38,13 @@
 - [x] Basic tests on common used libraries.
   - [x] matplotlib
   - [x] gradio
+
+## Plans
+
+- [ ] Python virtual environment.
+- [ ] Preprocess reference counting.
+- [ ] True multi-threading.
+- [ ] Support [LLGo](https://github.com/goplus/llgo).
 
 ## Examples
 
