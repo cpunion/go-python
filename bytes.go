@@ -34,5 +34,5 @@ func (b Bytes) Bytes() []byte {
 }
 
 func (b Bytes) Decode(encoding string) Str {
-	return Cast[Str](b.Call("decode", MakeStr(encoding)))
+	return cast[Str](b.Call("decode", MakeStr(encoding)))
 }

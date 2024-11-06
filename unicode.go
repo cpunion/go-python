@@ -37,5 +37,5 @@ func (s Str) ByteLen() int {
 }
 
 func (s Str) Encode(encoding string) Bytes {
-	return Cast[Bytes](s.Call("encode", MakeStr(encoding)))
+	return cast[Bytes](s.Call("encode", MakeStr(encoding)))
 }

@@ -60,9 +60,9 @@ func EvalCode(code Object, globals, locals Dict) Object {
 
 // ----------------------------------------------------------------------------
 
-// llgo:link Cast llgo.staticCast
-func Cast[U, T Objecter](obj T) (u U) {
-	*(*T)(unsafe.Pointer(&u)) = obj
+// llgo:link cast llgo.staticCast
+func cast[U, T Objecter](from T) (to U) {
+	*(*T)(unsafe.Pointer(&to)) = from
 	return
 }
 
