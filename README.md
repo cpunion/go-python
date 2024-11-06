@@ -1,6 +1,12 @@
 # go-python: Write Python in Go - The most intuitive Python wrapper for Golang
 
-[![codecov](https://codecov.io/github/cpunion/go-python/graph/badge.svg?token=DLVMvjAOFM)](https://codecov.io/github/cpunion/go-python)
+[![Build Status](https://github.com/cpunion/go-python/actions/workflows/go.yml/badge.svg)](https://github.com/cpunion/go-python/actions/workflows/go.yml)
+[![Coverage Status](https://codecov.io/github/cpunion/go-python/graph/badge.svg?token=DLVMvjAOFM)](https://codecov.io/github/cpunion/go-python)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/cpunion/go-python)
+[![GitHub commits](https://badgen.net/github/commits/cpunion/go-python)](https://GitHub.com/Naereen/cpunion/go-python/commit/)
+[![GitHub release](https://img.shields.io/github/v/tag/cpunion/go-python.svg?label=release)](https://github.com/cpunion/go-python/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cpunion/go-python)](https://goreportcard.com/report/github.com/cpunion/go-python)
+[![Go Reference](https://pkg.go.dev/badge/github.com/cpunion/go-python.svg)](https://pkg.go.dev/github.com/cpunion/go-python)
 
 ## Goal
 
