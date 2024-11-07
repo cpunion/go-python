@@ -36,6 +36,10 @@ func (m Module) AddObject(name string, obj Object) int {
 	return r
 }
 
+func (m Module) Name() string {
+	return C.GoString(C.PyModule_GetName(m.obj))
+}
+
 func CreateModule(name string) Module {
 	mod := C.PyModule_New(AllocCStrDontFree(name))
 	return newModule(mod)

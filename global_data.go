@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"unsafe"
 )
 
 // ----------------------------------------------------------------------------
@@ -51,11 +52,15 @@ func (l *decRefList) add(obj *C.PyObject) {
 	l.mu.Unlock()
 }
 
-func (l *decRefList) decRefAll() {
-	var list []*C.PyObject
-
+func (l *decRefList) len() int {
 	l.mu.Lock()
-	list = l.objects
+	defer l.mu.Unlock()
+	return len(l.objects)
+}
+
+func (l *decRefList) decRefAll() {
+	l.mu.Lock()
+	list := l.objects
 	l.objects = make([]*C.PyObject, 0, maxPyObjects*2)
 	l.mu.Unlock()
 
@@ -67,12 +72,12 @@ func (l *decRefList) decRefAll() {
 // ----------------------------------------------------------------------------
 
 type globalData struct {
-	typeMetas     map[*C.PyObject]*typeMeta
-	pyTypes       map[reflect.Type]*C.PyObject
-	holders       holderList
-	decRefList    decRefList
-	disableDecRef bool
-	finished      int32
+	typeMetas    map[*C.PyObject]*typeMeta
+	pyTypes      map[reflect.Type]*C.PyObject
+	holders      holderList
+	decRefList   decRefList
+	finished     int32
+	alwaysDecRef bool
 }
 
 var (
@@ -84,9 +89,6 @@ func getGlobalData() *globalData {
 }
 
 func (gd *globalData) addDecRef(obj *C.PyObject) {
-	if gd.disableDecRef {
-		return
-	}
 	if atomic.LoadInt32(&gd.finished) != 0 {
 		return
 	}
@@ -94,7 +96,9 @@ func (gd *globalData) addDecRef(obj *C.PyObject) {
 }
 
 func (gd *globalData) decRefObjectsIfNeeded() {
-	gd.decRefList.decRefAll()
+	if gd.alwaysDecRef || gd.decRefList.len() >= maxPyObjects {
+		gd.decRefList.decRefAll()
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -111,5 +115,15 @@ func markFinished() {
 }
 
 func cleanupGlobal() {
+	for _, meta := range global.typeMetas {
+		for _, method := range meta.methods {
+			def := method.def
+			if def != nil {
+				C.free(unsafe.Pointer(def.ml_name))
+				C.free(unsafe.Pointer(def.ml_doc))
+				C.free(unsafe.Pointer(def))
+			}
+		}
+	}
 	global = nil
 }

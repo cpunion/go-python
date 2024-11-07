@@ -149,7 +149,9 @@ func ToValue(from Object, to reflect.Value) bool {
 			t := to.Type()
 			to.Set(reflect.MakeMap(t))
 			dict := cast[Dict](from)
-			for key, value := range dict.Items() {
+			iter := dict.Iter()
+			for iter.HasNext() {
+				key, value := iter.Next()
 				vk := reflect.New(t.Key()).Elem()
 				vv := reflect.New(t.Elem()).Elem()
 				if !ToValue(key, vk) || !ToValue(value, vv) {

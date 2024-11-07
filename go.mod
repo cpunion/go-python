@@ -1,3 +1,3 @@
 module github.com/cpunion/go-python
 
-go 1.23
+go 1.20

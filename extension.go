@@ -50,6 +50,7 @@ type slotMeta struct {
 	hasRecv    bool         // whether it has a receiver
 	index      int          // used for member type
 	typ        reflect.Type // member/method type
+	def        *C.PyMethodDef
 }
 
 type typeMeta struct {
@@ -60,9 +61,7 @@ type typeMeta struct {
 
 func allocWrapper(typ *C.PyTypeObject, obj any) *wrapperType {
 	self := C.PyType_GenericAlloc(typ, 0)
-	if self == nil {
-		return nil
-	}
+	check(self != nil, "failed to allocate wrapper")
 	wrapper := (*wrapperType)(unsafe.Pointer(self))
 	holder := new(objectHolder)
 	holder.obj = obj
@@ -83,9 +82,7 @@ func wrapperAlloc(typ *C.PyTypeObject, size C.Py_ssize_t) *C.PyObject {
 	maps := getGlobalData()
 	meta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(typ))]
 	wrapper := allocWrapper(typ, reflect.New(meta.typ).Interface())
-	if wrapper == nil {
-		return nil
-	}
+	check(wrapper != nil, "failed to allocate wrapper")
 	return (*C.PyObject)(unsafe.Pointer(wrapper))
 }
 
@@ -101,9 +98,8 @@ func wrapperInit(self, args *C.PyObject) C.int {
 	typ := (*C.PyObject)(self).ob_type
 	maps := getGlobalData()
 	typeMeta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(typ))]
-	if typeMeta.init == nil {
-		return 0
-	}
+	check(typeMeta != nil, "type not registered")
+	check(typeMeta.init != nil, "init method not found")
 	if wrapperMethod_(typeMeta, typeMeta.init, self, args, 0) == nil {
 		return -1
 	}
@@ -114,15 +110,9 @@ func wrapperInit(self, args *C.PyObject) C.int {
 func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.PyObject {
 	maps := getGlobalData()
 	typeMeta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(self.ob_type))]
-	if typeMeta == nil {
-		SetError(fmt.Errorf("type %v not registered", FromPy(self)))
-		return nil
-	}
+	check(typeMeta != nil, fmt.Sprintf("type %v not registered", FromPy(self)))
 	methodMeta := typeMeta.methods[uint(methodId)]
-	if methodMeta == nil {
-		SetError(fmt.Errorf("getter method %d not found", methodId))
-		return nil
-	}
+	check(methodMeta != nil, fmt.Sprintf("getter method %d not found", methodId))
 
 	wrapper := (*wrapperType)(unsafe.Pointer(self))
 	goPtr := reflect.ValueOf(wrapper.goObj)
@@ -136,10 +126,7 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 		}
 		if pyType, ok := maps.pyTypes[fieldType.Elem()]; ok {
 			newWrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), field.Interface())
-			if newWrapper == nil {
-				SetError(fmt.Errorf("failed to allocate wrapper for nested struct pointer"))
-				return nil
-			}
+			check(newWrapper != nil, "failed to allocate wrapper for nested struct pointer")
 			return (*C.PyObject)(unsafe.Pointer(newWrapper))
 		}
 	} else if field.Kind() == reflect.Struct {
@@ -148,10 +135,7 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 			fieldAddr := unsafe.Add(baseAddr, typeMeta.typ.Field(methodMeta.index).Offset)
 			fieldPtr := reflect.NewAt(fieldType, fieldAddr).Interface()
 			newWrapper := allocWrapper((*C.PyTypeObject)(unsafe.Pointer(pyType)), fieldPtr)
-			if newWrapper == nil {
-				SetError(fmt.Errorf("failed to allocate wrapper for nested struct"))
-				return nil
-			}
+			check(newWrapper != nil, "failed to allocate wrapper for nested struct")
 			return (*C.PyObject)(unsafe.Pointer(newWrapper))
 		}
 	}
@@ -162,15 +146,9 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.int) C.int {
 	maps := getGlobalData()
 	typeMeta := maps.typeMetas[(*C.PyObject)(unsafe.Pointer(self.ob_type))]
-	if typeMeta == nil {
-		SetError(fmt.Errorf("type %v not registered", FromPy(self)))
-		return -1
-	}
+	check(typeMeta != nil, fmt.Sprintf("type %v not registered", FromPy(self)))
 	methodMeta := typeMeta.methods[uint(methodId)]
-	if methodMeta == nil {
-		SetError(fmt.Errorf("setter method %d not found", methodId))
-		return -1
-	}
+	check(methodMeta != nil, fmt.Sprintf("setter method %d not found", methodId))
 
 	wrapper := (*wrapperType)(unsafe.Pointer(self))
 	goPtr := reflect.ValueOf(wrapper.goObj)
@@ -178,13 +156,13 @@ func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.i
 
 	structValue := goValue
 	if !structValue.CanSet() {
-		SetError(fmt.Errorf("struct value cannot be set"))
+		SetTypeError(fmt.Errorf("struct value cannot be set"))
 		return -1
 	}
 
 	field := structValue.Field(methodMeta.index)
 	if !field.CanSet() {
-		SetError(fmt.Errorf("field %s cannot be set", methodMeta.name))
+		SetTypeError(fmt.Errorf("field %s cannot be set", methodMeta.name))
 		return -1
 	}
 
@@ -210,7 +188,7 @@ func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.i
 			}
 			valueWrapper := (*wrapperType)(unsafe.Pointer(value))
 			if valueWrapper == nil {
-				SetError(fmt.Errorf("invalid value for struct pointer field"))
+				SetTypeError(fmt.Errorf("invalid value for struct pointer field"))
 				return -1
 			}
 			field.Set(reflect.ValueOf(valueWrapper.goObj))
@@ -229,10 +207,6 @@ func setterMethod(self, value *C.PyObject, _closure unsafe.Pointer, methodId C.i
 				return -1
 			}
 			valueWrapper := (*wrapperType)(unsafe.Pointer(value))
-			if valueWrapper == nil {
-				SetError(fmt.Errorf("invalid value for struct field"))
-				return -1
-			}
 			baseAddr := goPtr.UnsafePointer()
 			fieldAddr := unsafe.Add(baseAddr, typeMeta.typ.Field(methodMeta.index).Offset)
 			fieldPtr := reflect.NewAt(fieldType, fieldAddr)
@@ -257,21 +231,13 @@ func wrapperMethod(self, args *C.PyObject, methodId C.int) *C.PyObject {
 
 	maps := getGlobalData()
 	typeMeta, ok := maps.typeMetas[key]
-	if !ok {
-		SetError(fmt.Errorf("type %v not registered", FromPy(key)))
-		return nil
-	}
+	check(ok, fmt.Sprintf("type %v not registered", FromPy(key)))
 
 	methodMeta := typeMeta.methods[uint(methodId)]
 	return wrapperMethod_(typeMeta, methodMeta, self, args, methodId)
 }
 
 func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyObject, methodId C.int) *C.PyObject {
-	if methodMeta == nil {
-		SetError(fmt.Errorf("method %d not found", methodId))
-		return nil
-	}
-
 	methodType := methodMeta.typ
 	argc := C.PyTuple_Size(args)
 	expectedArgs := methodType.NumIn()
@@ -550,9 +516,11 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 		*currentSlot = slot
 	}
 
+	typeName := fmt.Sprintf("%s.%s", m.Name(), name)
+
 	totalSize := unsafe.Sizeof(wrapperType{})
 	spec := &C.PyType_Spec{
-		name:      C.CString(name),
+		name:      C.CString(typeName),
 		basicsize: C.int(totalSize),
 		flags:     C.Py_TPFLAGS_DEFAULT,
 		slots:     slotsPtr,
@@ -627,30 +595,30 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 	}
 
 	methodId := uint(len(meta.methods))
-	meta.methods[methodId] = &slotMeta{
+
+	methodPtr := C.wrapperMethods[methodId]
+	cName := C.CString(name)
+	cDoc := C.CString(doc)
+
+	def := (*C.PyMethodDef)(C.malloc(C.size_t(unsafe.Sizeof(C.PyMethodDef{}))))
+	def.ml_name = cName
+	def.ml_meth = C.PyCFunction(methodPtr)
+	def.ml_flags = C.METH_VARARGS
+	def.ml_doc = cDoc
+
+	methodMeta := &slotMeta{
 		name:       name,
 		methodName: name,
 		fn:         fn,
 		typ:        t,
 		doc:        doc,
 		hasRecv:    false,
+		def:        def,
 	}
-
-	methodPtr := C.wrapperMethods[methodId]
-	cName := C.CString(name)
-	cDoc := C.CString(doc)
-
-	def := &C.PyMethodDef{
-		ml_name:  cName,
-		ml_meth:  C.PyCFunction(methodPtr),
-		ml_flags: C.METH_VARARGS,
-		ml_doc:   cDoc,
-	}
+	meta.methods[methodId] = methodMeta
 
 	pyFunc := C.PyCFunction_NewEx(def, m.obj, m.obj)
-	if pyFunc == nil {
-		panic(fmt.Sprintf("Failed to create function %s", name))
-	}
+	check(pyFunc != nil, fmt.Sprintf("Failed to create function %s", name))
 
 	if C.PyModule_AddObjectRef(m.obj, cName, pyFunc) < 0 {
 		C.Py_DecRef(pyFunc)
@@ -658,12 +626,6 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 	}
 
 	return newFunc(pyFunc)
-}
-
-func SetError(err error) {
-	errStr := C.CString(err.Error())
-	C.PyErr_SetString(C.PyExc_RuntimeError, errStr)
-	C.free(unsafe.Pointer(errStr))
 }
 
 func SetTypeError(err error) {
