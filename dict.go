@@ -13,7 +13,7 @@ type Dict struct {
 	Object
 }
 
-func newDict(obj *PyObject) Dict {
+func newDict(obj *cPyObject) Dict {
 	return Dict{newObject(obj)}
 }
 
@@ -44,19 +44,19 @@ func (d Dict) HasKey(key any) bool {
 }
 
 func (d Dict) Get(key Objecter) Object {
-	v := C.PyDict_GetItem(d.obj, key.Obj())
+	v := C.PyDict_GetItem(d.obj, key.cpyObj())
 	C.Py_IncRef(v)
 	return newObject(v)
 }
 
 func (d Dict) Set(key, value Objecter) {
-	keyObj := key.Obj()
-	valueObj := value.Obj()
+	keyObj := key.cpyObj()
+	valueObj := value.cpyObj()
 	C.PyDict_SetItem(d.obj, keyObj, valueObj)
 }
 
 func (d Dict) SetString(key string, value Objecter) {
-	valueObj := value.Obj()
+	valueObj := value.cpyObj()
 	ckey := AllocCStr(key)
 	r := C.PyDict_SetItemString(d.obj, ckey, valueObj)
 	C.free(unsafe.Pointer(ckey))
@@ -72,7 +72,7 @@ func (d Dict) GetString(key string) Object {
 }
 
 func (d Dict) Del(key Objecter) {
-	C.PyDict_DelItem(d.obj, key.Obj())
+	C.PyDict_DelItem(d.obj, key.cpyObj())
 }
 
 func (d Dict) Iter() *DictIter {

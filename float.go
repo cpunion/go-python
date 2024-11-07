@@ -11,7 +11,7 @@ type Float struct {
 	Object
 }
 
-func newFloat(obj *PyObject) Float {
+func newFloat(obj *cPyObject) Float {
 	return Float{newObject(obj)}
 }
 

@@ -9,7 +9,7 @@ type Complex struct {
 	Object
 }
 
-func newComplex(obj *PyObject) Complex {
+func newComplex(obj *cPyObject) Complex {
 	return Complex{newObject(obj)}
 }
 

@@ -185,16 +185,16 @@ func TestObjectString(t *testing.T) {
 
 func TestPyObjectMethods(t *testing.T) {
 	setupTest(t)
-	// Test pyObject.Obj()
+	// Test pyObject.cpyObj()
 	obj := From(42)
-	if obj.pyObject.Obj() == nil {
-		t.Error("pyObject.Obj() returned nil for valid object")
+	if obj.pyObject.cpyObj() == nil {
+		t.Error("pyObject.cpyObj() returned nil for valid object")
 	}
 
 	func() {
 		var nilObj *pyObject
-		if nilObj.Obj() != nil {
-			t.Error("pyObject.Obj() should return nil for nil object")
+		if nilObj.cpyObj() != nil {
+			t.Error("pyObject.cpyObj() should return nil for nil object")
 		}
 	}()
 
@@ -365,17 +365,17 @@ def make_tuple():
 	}()
 
 	func() {
-		// Test Object.Obj()
+		// Test Object.cpyObj()
 		obj := From(42)
-		if obj.Obj() == nil {
-			t.Error("Object.Obj() returned nil for valid object")
+		if obj.cpyObj() == nil {
+			t.Error("Object.cpyObj() returned nil for valid object")
 		}
 	}()
 
 	func() {
 		var nilObj Object
-		if nilObj.Obj() != nil {
-			t.Error("Object.Obj() should return nil for nil object")
+		if nilObj.cpyObj() != nil {
+			t.Error("Object.cpyObj() should return nil for nil object")
 		}
 	}()
 

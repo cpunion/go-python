@@ -9,7 +9,7 @@ type Bool struct {
 	Object
 }
 
-func newBool(obj *PyObject) Bool {
+func newBool(obj *cPyObject) Bool {
 	return Bool{newObject(obj)}
 }
 

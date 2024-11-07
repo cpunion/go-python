@@ -11,8 +11,7 @@ import (
 	"unsafe"
 )
 
-type PyObject = C.PyObject
-type PyCFunction = C.PyCFunction
+type cPyObject = C.PyObject
 
 func Initialize() {
 	runtime.LockOSThread()
@@ -55,7 +54,7 @@ func CompileString(code, filename string, start InputType) (Object, error) {
 }
 
 func EvalCode(code Object, globals, locals Dict) Object {
-	return newObject(C.PyEval_EvalCode(code.Obj(), globals.Obj(), locals.Obj()))
+	return newObject(C.PyEval_EvalCode(code.cpyObj(), globals.cpyObj(), locals.cpyObj()))
 }
 
 // ----------------------------------------------------------------------------

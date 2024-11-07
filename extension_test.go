@@ -700,7 +700,7 @@ func TestAddTypeDuplicate(t *testing.T) {
 		t.Fatal("Failed to get type on second registration")
 	}
 
-	if typ1.Obj() != typ2.Obj() {
+	if typ1.cpyObj() != typ2.cpyObj() {
 		t.Fatal("Expected same type object on second registration")
 	}
 
@@ -721,7 +721,7 @@ assert obj1.value == 42
 		t.Fatal("Failed to get type on registration with pointer")
 	}
 
-	if typ1.Obj() != typ3.Obj() {
+	if typ1.cpyObj() != typ3.cpyObj() {
 		t.Fatal("Expected same type object on second registration")
 	}
 }

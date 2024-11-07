@@ -12,7 +12,7 @@ type Bytes struct {
 	Object
 }
 
-func newBytes(obj *PyObject) Bytes {
+func newBytes(obj *cPyObject) Bytes {
 	return Bytes{newObject(obj)}
 }
 

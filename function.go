@@ -6,7 +6,7 @@ package gp
 import "C"
 
 type Objecter interface {
-	Obj() *PyObject
+	cpyObj() *cPyObject
 	object() Object
 	Ensure()
 }
@@ -15,7 +15,7 @@ type Func struct {
 	Object
 }
 
-func newFunc(obj *PyObject) Func {
+func newFunc(obj *cPyObject) Func {
 	return Func{newObject(obj)}
 }
 
@@ -32,7 +32,7 @@ func (f Func) callNoArgs() Object {
 }
 
 func (f Func) callOneArg(arg Objecter) Object {
-	return newObject(C.PyObject_CallOneArg(f.obj, arg.Obj()))
+	return newObject(C.PyObject_CallOneArg(f.obj, arg.cpyObj()))
 }
 
 func (f Func) CallObject(args Tuple) Object {

@@ -150,7 +150,7 @@ func TestTupleParseArgsTypes(t *testing.T) {
 	var strVal string
 	var bytesVal []byte
 	var objVal Object
-	var pyObj *PyObject
+	var pyObj *cPyObject
 
 	success = strTuple.ParseArgs(&strVal)
 	if !success || strVal != "hello" {

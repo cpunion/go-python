@@ -10,7 +10,7 @@ type Module struct {
 	Object
 }
 
-func newModule(obj *PyObject) Module {
+func newModule(obj *cPyObject) Module {
 	return Module{newObject(obj)}
 }
 
