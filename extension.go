@@ -31,7 +31,7 @@ func CreateFunc(name string, fn any, doc string) Func {
 }
 
 type wrapperType struct {
-	PyObject
+	cPyObject
 	goObj  any
 	holder *objectHolder
 }
@@ -139,7 +139,7 @@ func getterMethod(self *C.PyObject, _closure unsafe.Pointer, methodId C.int) *C.
 			return (*C.PyObject)(unsafe.Pointer(newWrapper))
 		}
 	}
-	return From(field.Interface()).Obj()
+	return From(field.Interface()).cpyObj()
 }
 
 //export setterMethod
@@ -307,17 +307,17 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 	}
 
 	if len(results) == 0 {
-		return None().Obj()
+		return None().cpyObj()
 	}
 	if len(results) == 1 {
-		return From(results[0].Interface()).Obj()
+		return From(results[0].Interface()).cpyObj()
 	}
 
 	tuple := MakeTupleWithLen(len(results))
 	for i := range results {
 		tuple.Set(i, From(results[i].Interface()))
 	}
-	return tuple.Obj()
+	return tuple.cpyObj()
 }
 
 func goNameToPythonName(name string) string {

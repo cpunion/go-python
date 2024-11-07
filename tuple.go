@@ -10,7 +10,7 @@ type Tuple struct {
 	Object
 }
 
-func newTuple(obj *PyObject) Tuple {
+func newTuple(obj *cPyObject) Tuple {
 	return Tuple{newObject(obj)}
 }
 
@@ -34,7 +34,7 @@ func (t Tuple) Get(index int) Object {
 }
 
 func (t Tuple) Set(index int, obj Objecter) {
-	objObj := obj.Obj()
+	objObj := obj.cpyObj()
 	C.Py_IncRef(objObj)
 	r := C.PyTuple_SetItem(t.obj, C.Py_ssize_t(index), objObj)
 	check(r == 0, fmt.Sprintf("failed to set item %d in tuple", index))
@@ -101,8 +101,8 @@ func (t Tuple) ParseArgs(addrs ...any) bool {
 		case *bool:
 			*v = obj.AsBool().Bool()
 
-		case **PyObject:
-			*v = obj.Obj()
+		case **cPyObject:
+			*v = obj.cpyObj()
 
 		// Python object
 		case *Object:

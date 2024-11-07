@@ -10,7 +10,7 @@ type Long struct {
 	Object
 }
 
-func newLong(obj *PyObject) Long {
+func newLong(obj *cPyObject) Long {
 	return Long{newObject(obj)}
 }
 
@@ -30,7 +30,7 @@ func LongFromString(s string, base int) Long {
 }
 
 func LongFromUnicode(u Object, base int) Long {
-	return newLong(C.PyLong_FromUnicodeObject(u.Obj(), C.int(base)))
+	return newLong(C.PyLong_FromUnicodeObject(u.cpyObj(), C.int(base)))
 }
 
 func (l Long) Int() int {

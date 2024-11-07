@@ -10,7 +10,7 @@ type Str struct {
 	Object
 }
 
-func newStr(obj *PyObject) Str {
+func newStr(obj *cPyObject) Str {
 	return Str{newObject(obj)}
 }
 

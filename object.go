@@ -18,7 +18,7 @@ type pyObject struct {
 	g   *globalData
 }
 
-func (o *pyObject) Obj() *PyObject {
+func (o *pyObject) cpyObj() *cPyObject {
 	if o == nil {
 		return nil
 	}
@@ -42,7 +42,7 @@ type Object struct {
 	*pyObject
 }
 
-func FromPy(obj *PyObject) Object {
+func FromPy(obj *cPyObject) Object {
 	return newObject(obj)
 }
 
@@ -50,12 +50,12 @@ func (o Object) object() Object {
 	return o
 }
 
-func newObjectRef(obj *PyObject) Object {
+func newObjectRef(obj *cPyObject) Object {
 	C.Py_IncRef(obj)
 	return newObject(obj)
 }
 
-func newObject(obj *PyObject) Object {
+func newObject(obj *cPyObject) Object {
 	if obj == nil {
 		C.PyErr_Print()
 		panic("nil Python object")
@@ -73,7 +73,7 @@ func (o Object) Dir() List {
 }
 
 func (o Object) Equals(other Objecter) bool {
-	return C.PyObject_RichCompareBool(o.obj, other.Obj(), C.Py_EQ) != 0
+	return C.PyObject_RichCompareBool(o.obj, other.cpyObj(), C.Py_EQ) != 0
 }
 
 func (o Object) Attr(name string) Object {
@@ -222,14 +222,14 @@ func (o Object) Repr() string {
 }
 
 func (o Object) Type() Object {
-	return newObject(C.PyObject_Type(o.Obj()))
+	return newObject(C.PyObject_Type(o.cpyObj()))
 }
 
 func (o Object) String() string {
 	return newStr(C.PyObject_Str(o.obj)).String()
 }
 
-func (o Object) Obj() *PyObject {
+func (o Object) cpyObj() *cPyObject {
 	if o.Nil() {
 		return nil
 	}

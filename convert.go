@@ -14,7 +14,7 @@ import (
 func From(from any) Object {
 	switch v := from.(type) {
 	case Objecter:
-		return newObject(v.Obj())
+		return newObject(v.cpyObj())
 	case int8:
 		return newObject(C.PyLong_FromLong(C.long(v)))
 	case int16:
@@ -181,11 +181,11 @@ func ToValue(from Object, to reflect.Value) bool {
 			}
 		} else {
 			maps := getGlobalData()
-			tyMeta := maps.typeMetas[from.Type().Obj()]
+			tyMeta := maps.typeMetas[from.Type().cpyObj()]
 			if tyMeta == nil {
 				return false
 			}
-			wrapper := (*wrapperType)(unsafe.Pointer(from.Obj()))
+			wrapper := (*wrapperType)(unsafe.Pointer(from.cpyObj()))
 			to.Set(reflect.ValueOf(wrapper.goObj).Elem())
 			return true
 		}

@@ -180,15 +180,15 @@ func TestFromSpecialCases(t *testing.T) {
 	}()
 
 	func() {
-		// Test From with Object.Obj()
+		// Test From with Object.cpyObj()
 		original := From(42)
-		obj := From(original.Obj())
+		obj := From(original.cpyObj())
 
 		if !obj.IsLong() {
-			t.Error("From(Object.Obj()) did not create Long object")
+			t.Error("From(Object.cpyObj()) did not create Long object")
 		}
 		if got := obj.AsLong().Int64(); got != 42 {
-			t.Errorf("From(Object.Obj()) = %d, want 42", got)
+			t.Errorf("From(Object.cpyObj()) = %d, want 42", got)
 		}
 
 		// Test that the new object is independent
@@ -281,7 +281,7 @@ func TestFromWithCustomType(t *testing.T) {
 		obj := From(p)
 
 		// Verify the type
-		if obj.Type().Obj() != pointClass.Obj() {
+		if obj.Type().cpyObj() != pointClass.cpyObj() {
 			t.Error("From(Point) created object with wrong type")
 		}
 		// Verify the values
@@ -311,7 +311,7 @@ func TestFromWithCustomType(t *testing.T) {
 		obj := From(p)
 
 		// Verify the type
-		if obj.Type().Obj() != pointClass.Obj() {
+		if obj.Type().cpyObj() != pointClass.cpyObj() {
 			t.Error("From(*Point) created object with wrong type")
 		}
 
