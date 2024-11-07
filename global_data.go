@@ -72,11 +72,12 @@ func (l *decRefList) decRefAll() {
 // ----------------------------------------------------------------------------
 
 type globalData struct {
-	typeMetas  map[*C.PyObject]*typeMeta
-	pyTypes    map[reflect.Type]*C.PyObject
-	holders    holderList
-	decRefList decRefList
-	finished   int32
+	typeMetas    map[*C.PyObject]*typeMeta
+	pyTypes      map[reflect.Type]*C.PyObject
+	holders      holderList
+	decRefList   decRefList
+	finished     int32
+	alwaysDecRef bool
 }
 
 var (
@@ -95,7 +96,7 @@ func (gd *globalData) addDecRef(obj *C.PyObject) {
 }
 
 func (gd *globalData) decRefObjectsIfNeeded() {
-	if gd.decRefList.len() >= maxPyObjects {
+	if gd.alwaysDecRef || gd.decRefList.len() >= maxPyObjects {
 		gd.decRefList.decRefAll()
 	}
 }

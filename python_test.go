@@ -13,7 +13,7 @@ var (
 func setupTest(t *testing.T) {
 	testMutex.Lock()
 	Initialize()
-	// TODO: Remove this once we solve random segfaults
+	getGlobalData().alwaysDecRef = true
 	t.Cleanup(func() {
 		runtime.GC()
 		Finalize()

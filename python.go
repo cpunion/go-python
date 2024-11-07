@@ -93,9 +93,7 @@ func Nil() Object {
 func RunString(code string) error {
 	// Get __main__ module dict for executing code
 	main := MainModule()
-	if main.Nil() {
-		return fmt.Errorf("failed to get __main__ module")
-	}
+	check(!main.Nil(), "failed to get __main__ module")
 	dict := main.Dict()
 
 	// Run the code string

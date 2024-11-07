@@ -89,6 +89,10 @@ func TestLongConversions(t *testing.T) {
 	if got := l.Float64(); got != 42.0 {
 		t.Errorf("Float64() = %f; want 42.0", got)
 	}
+
+	if got := l.Uintptr(); got != 42 {
+		t.Errorf("Uintptr() = %d; want 42", got)
+	}
 }
 
 func TestLongFromUintptr(t *testing.T) {
