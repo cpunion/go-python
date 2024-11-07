@@ -155,7 +155,9 @@ func TestDictForEach(t *testing.T) {
 		"key3": "value3",
 	}
 
-	for key, value := range dict.Items() {
+	iter := dict.Iter()
+	for iter.HasNext() {
+		key, value := iter.Next()
 		count++
 		k := key.String()
 		v := value.String()

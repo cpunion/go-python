@@ -75,26 +75,26 @@ func (d Dict) Del(key Objecter) {
 	C.PyDict_DelItem(d.obj, key.Obj())
 }
 
-func (d Dict) Items() func(fn func(key, value Object) bool) {
-	return func(fn func(key, value Object) bool) {
-		items := C.PyDict_Items(d.obj)
-		check(items != nil, "failed to get items of dict")
-		defer C.Py_DecRef(items)
-		iter := C.PyObject_GetIter(items)
-		for {
-			item := C.PyIter_Next(iter)
-			if item == nil {
-				break
-			}
-			C.Py_IncRef(item)
-			key := C.PyTuple_GetItem(item, 0)
-			value := C.PyTuple_GetItem(item, 1)
-			C.Py_IncRef(key)
-			C.Py_IncRef(value)
-			C.Py_DecRef(item)
-			if !fn(newObject(key), newObject(value)) {
-				break
-			}
-		}
+func (d Dict) Iter() *DictIter {
+	return &DictIter{dict: d, pos: 0}
+}
+
+type DictIter struct {
+	dict Dict
+	pos  C.long
+}
+
+func (d *DictIter) HasNext() bool {
+	pos := d.pos
+	return C.PyDict_Next(d.dict.obj, &pos, nil, nil) != 0
+}
+
+func (d *DictIter) Next() (Object, Object) {
+	var key, value *C.PyObject
+	if C.PyDict_Next(d.dict.obj, &d.pos, &key, &value) == 0 {
+		return Nil(), Nil()
 	}
+	C.Py_IncRef(key)
+	C.Py_IncRef(value)
+	return newObject(key), newObject(value)
 }
