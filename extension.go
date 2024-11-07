@@ -50,6 +50,7 @@ type slotMeta struct {
 	hasRecv    bool         // whether it has a receiver
 	index      int          // used for member type
 	typ        reflect.Type // member/method type
+	def        *C.PyMethodDef
 }
 
 type typeMeta struct {
@@ -627,25 +628,27 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 	}
 
 	methodId := uint(len(meta.methods))
-	meta.methods[methodId] = &slotMeta{
+
+	methodPtr := C.wrapperMethods[methodId]
+	cName := C.CString(name)
+	cDoc := C.CString(doc)
+
+	def := (*C.PyMethodDef)(C.malloc(C.size_t(unsafe.Sizeof(C.PyMethodDef{}))))
+	def.ml_name = cName
+	def.ml_meth = C.PyCFunction(methodPtr)
+	def.ml_flags = C.METH_VARARGS
+	def.ml_doc = cDoc
+
+	methodMeta := &slotMeta{
 		name:       name,
 		methodName: name,
 		fn:         fn,
 		typ:        t,
 		doc:        doc,
 		hasRecv:    false,
+		def:        def,
 	}
-
-	methodPtr := C.wrapperMethods[methodId]
-	cName := C.CString(name)
-	cDoc := C.CString(doc)
-
-	def := &C.PyMethodDef{
-		ml_name:  cName,
-		ml_meth:  C.PyCFunction(methodPtr),
-		ml_flags: C.METH_VARARGS,
-		ml_doc:   cDoc,
-	}
+	meta.methods[methodId] = methodMeta
 
 	pyFunc := C.PyCFunction_NewEx(def, m.obj, m.obj)
 	if pyFunc == nil {
