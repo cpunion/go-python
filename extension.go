@@ -551,9 +551,11 @@ func (m Module) AddType(obj, init any, name, doc string) Object {
 		*currentSlot = slot
 	}
 
+	typeName := fmt.Sprintf("%s.%s", m.Name(), name)
+
 	totalSize := unsafe.Sizeof(wrapperType{})
 	spec := &C.PyType_Spec{
-		name:      C.CString(name),
+		name:      C.CString(typeName),
 		basicsize: C.int(totalSize),
 		flags:     C.Py_TPFLAGS_DEFAULT,
 		slots:     slotsPtr,
