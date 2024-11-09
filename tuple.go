@@ -28,9 +28,7 @@ func MakeTuple(args ...any) Tuple {
 }
 
 func (t Tuple) Get(index int) Object {
-	v := C.PyTuple_GetItem(t.obj, C.Py_ssize_t(index))
-	C.Py_IncRef(v)
-	return newObject(v)
+	return newObject(C.PySequence_GetItem(t.obj, C.Py_ssize_t(index)))
 }
 
 func (t Tuple) Set(index int, obj Objecter) {
