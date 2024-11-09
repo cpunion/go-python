@@ -272,7 +272,7 @@ func wrapperMethod_(typeMeta *typeMeta, methodMeta *slotMeta, self, args *C.PyOb
 	}
 
 	for i := 0; i < int(argc); i++ {
-		arg := C.PyTuple_GetItem(args, C.Py_ssize_t(i))
+		arg := C.PySequence_GetItem(args, C.Py_ssize_t(i))
 		argType := methodType.In(i + argIndex)
 		argPy := FromPy(arg)
 		goValue := reflect.New(argType).Elem()

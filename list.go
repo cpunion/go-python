@@ -24,9 +24,7 @@ func MakeList(args ...any) List {
 }
 
 func (l List) GetItem(index int) Object {
-	v := C.PyList_GetItem(l.obj, C.Py_ssize_t(index))
-	C.Py_IncRef(v)
-	return newObject(v)
+	return newObject(C.PySequence_GetItem(l.obj, C.Py_ssize_t(index)))
 }
 
 func (l List) SetItem(index int, item Objecter) {
