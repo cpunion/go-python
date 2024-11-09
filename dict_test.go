@@ -155,16 +155,15 @@ func TestDictForEach(t *testing.T) {
 		"key3": "value3",
 	}
 
-	iter := dict.Iter()
-	for iter.HasNext() {
-		key, value := iter.Next()
+	dict.Items()(func(key, value Object) bool {
 		count++
 		k := key.String()
 		v := value.String()
 		if expectedVal, ok := expectedPairs[k]; !ok || expectedVal != v {
 			t.Errorf("ForEach() unexpected pair: %v: %v", k, v)
 		}
-	}
+		return true
+	})
 
 	if count != len(expectedPairs) {
 		t.Errorf("ForEach() visited %d pairs, want %d", count, len(expectedPairs))

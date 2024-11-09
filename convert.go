@@ -149,16 +149,15 @@ func ToValue(from Object, to reflect.Value) bool {
 			t := to.Type()
 			to.Set(reflect.MakeMap(t))
 			dict := cast[Dict](from)
-			iter := dict.Iter()
-			for iter.HasNext() {
-				key, value := iter.Next()
+			dict.Items()(func(key, value Object) bool {
 				vk := reflect.New(t.Key()).Elem()
 				vv := reflect.New(t.Elem()).Elem()
 				if !ToValue(key, vk) || !ToValue(value, vv) {
 					return false
 				}
 				to.SetMapIndex(vk, vv)
-			}
+				return true
+			})
 			return true
 		} else {
 			return false

@@ -2,6 +2,26 @@ package gp
 
 /*
 #include <Python.h>
+
+typedef struct pyCriticalSection {
+    uintptr_t _cs_prev;
+    void *_cs_mutex;
+} pyCriticalSection;
+static inline void pyCriticalSection_Begin(pyCriticalSection *pcs, PyObject *op) {
+#if PY_VERSION_HEX >= 0x030D0000
+    PyCriticalSection_Begin((PyCriticalSection*)pcs, op);
+#else
+    PyGILState_STATE gstate = PyGILState_Ensure();
+		pcs->_cs_prev = (uintptr_t)gstate;
+#endif
+}
+static inline void pyCriticalSection_End(pyCriticalSection *pcs) {
+#if PY_VERSION_HEX >= 0x030D0000
+    PyCriticalSection_End((PyCriticalSection*)pcs);
+#else
+    PyGILState_Release((PyGILState_STATE)pcs->_cs_prev);
+#endif
+}
 */
 import "C"
 import (
@@ -75,26 +95,18 @@ func (d Dict) Del(key Objecter) {
 	C.PyDict_DelItem(d.obj, key.cpyObj())
 }
 
-func (d Dict) Iter() *DictIter {
-	return &DictIter{dict: d, pos: 0}
-}
-
-type DictIter struct {
-	dict Dict
-	pos  C.long
-}
-
-func (d *DictIter) HasNext() bool {
-	pos := d.pos
-	return C.PyDict_Next(d.dict.obj, &pos, nil, nil) != 0
-}
-
-func (d *DictIter) Next() (Object, Object) {
-	var key, value *C.PyObject
-	if C.PyDict_Next(d.dict.obj, &d.pos, &key, &value) == 0 {
-		return Nil(), Nil()
+func (d Dict) Items() func(func(Object, Object) bool) {
+	obj := d.cpyObj()
+	var cs C.pyCriticalSection
+	C.pyCriticalSection_Begin(&cs, obj)
+	return func(fn func(Object, Object) bool) {
+		defer C.pyCriticalSection_End(&cs)
+		var pos C.long
+		var key, value *C.PyObject
+		for C.PyDict_Next(obj, &pos, &key, &value) == 1 {
+			if !fn(newObject(key), newObject(value)) {
+				return
+			}
+		}
 	}
-	C.Py_IncRef(key)
-	C.Py_IncRef(value)
-	return newObject(key), newObject(value)
 }
