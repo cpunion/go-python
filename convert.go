@@ -76,6 +76,8 @@ func From(from any) Object {
 			return fromMap(vv).Object
 		case reflect.Struct:
 			return fromStruct(vv)
+		case reflect.Func:
+			return FuncOf(vv.Interface()).Object
 		}
 		panic(fmt.Errorf("unsupported type for Python: %T\n", v))
 	}

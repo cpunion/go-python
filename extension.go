@@ -25,6 +25,10 @@ import (
 	"unsafe"
 )
 
+func FuncOf(fn any) Func {
+	return CreateFunc("", fn, "")
+}
+
 func CreateFunc(name string, fn any, doc string) Func {
 	m := MainModule()
 	return m.AddMethod(name, fn, doc)
@@ -583,7 +587,24 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 		}
 	}
 	name = goNameToPythonName(name)
-	doc = name + doc
+
+	hasRecv := false
+	if t.NumIn() > 0 {
+		firstParam := t.In(0)
+		if firstParam.Kind() == reflect.Ptr || firstParam.Kind() == reflect.Interface {
+			hasRecv = true
+		}
+	}
+
+	kwargsType := reflect.TypeOf(KwArgs{})
+	hasKwArgs := false
+	if t.NumIn() > 0 && t.In(t.NumIn()-1) == kwargsType {
+		hasKwArgs = true
+	}
+
+	sig := genSig(fn, hasRecv)
+	fullDoc := name + sig + "\n--\n\n" + doc
+	cDoc := C.CString(fullDoc)
 
 	maps := getGlobalData()
 	meta, ok := maps.typeMetas[m.obj]
@@ -596,14 +617,16 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 
 	methodId := uint(len(meta.methods))
 
-	methodPtr := C.wrapperMethods[methodId]
 	cName := C.CString(name)
-	cDoc := C.CString(doc)
 
 	def := (*C.PyMethodDef)(C.malloc(C.size_t(unsafe.Sizeof(C.PyMethodDef{}))))
 	def.ml_name = cName
-	def.ml_meth = C.PyCFunction(methodPtr)
+	def.ml_meth = C.PyCFunction(C.wrapperMethods[methodId])
 	def.ml_flags = C.METH_VARARGS
+	if hasKwArgs {
+		def.ml_flags |= C.METH_KEYWORDS
+		def.ml_meth = C.PyCFunction(C.wrapperMethodsWithKwargs[methodId])
+	}
 	def.ml_doc = cDoc
 
 	methodMeta := &slotMeta{
@@ -611,8 +634,8 @@ func (m Module) AddMethod(name string, fn any, doc string) Func {
 		methodName: name,
 		fn:         fn,
 		typ:        t,
-		doc:        doc,
-		hasRecv:    false,
+		doc:        fullDoc,
+		hasRecv:    hasRecv,
 		def:        def,
 	}
 	meta.methods[methodId] = methodMeta
@@ -664,4 +687,125 @@ func FetchError() error {
 	}
 
 	return fmt.Errorf("python error: %s", C.GoString(cstr))
+}
+
+func genSig(fn any, hasRecv bool) string {
+	t := reflect.TypeOf(fn)
+	if t.Kind() != reflect.Func {
+		panic("genSig: fn must be a function")
+	}
+
+	var args []string
+	startIdx := 0
+	if hasRecv {
+		startIdx = 1 // skip receiver
+	}
+
+	kwargsType := reflect.TypeOf(KwArgs{})
+	hasKwArgs := false
+	lastParamIdx := t.NumIn() - 1
+	if lastParamIdx >= startIdx && t.In(lastParamIdx) == kwargsType {
+		hasKwArgs = true
+		lastParamIdx-- // don't include KwArgs in regular parameters
+	}
+
+	for i := startIdx; i <= lastParamIdx; i++ {
+		paramName := fmt.Sprintf("arg%d", i-startIdx)
+		args = append(args, paramName)
+	}
+
+	// add "/" separator only if there are parameters
+	if len(args) > 0 {
+		args = append(args, "/")
+	}
+
+	// add "**kwargs" if there are keyword arguments
+	if hasKwArgs {
+		args = append(args, "**kwargs")
+	}
+
+	return fmt.Sprintf("(%s)", strings.Join(args, ", "))
+}
+
+//export wrapperMethodWithKwargs
+func wrapperMethodWithKwargs(self, args, kwargs *C.PyObject, methodId C.int) *C.PyObject {
+	key := self
+	if C.isModule(self) == 0 {
+		key = (*C.PyObject)(unsafe.Pointer(self.ob_type))
+	}
+
+	maps := getGlobalData()
+	typeMeta, ok := maps.typeMetas[key]
+	check(ok, fmt.Sprintf("type %v not registered", FromPy(key)))
+
+	methodMeta := typeMeta.methods[uint(methodId)]
+	methodType := methodMeta.typ
+	hasReceiver := methodMeta.hasRecv
+
+	expectedArgs := methodType.NumIn()
+	if hasReceiver {
+		expectedArgs-- // skip receiver
+	}
+	expectedArgs-- // skip KwArgs
+
+	argc := C.PyTuple_Size(args)
+	if int(argc) != expectedArgs {
+		SetTypeError(fmt.Errorf("method %s expects %d arguments, got %d", methodMeta.name, expectedArgs, argc))
+		return nil
+	}
+
+	goArgs := make([]reflect.Value, methodType.NumIn())
+	argIndex := 0
+
+	if hasReceiver {
+		wrapper := (*wrapperType)(unsafe.Pointer(self))
+		receiverType := methodType.In(0)
+		var recv reflect.Value
+
+		if receiverType.Kind() == reflect.Ptr {
+			recv = reflect.ValueOf(wrapper.goObj)
+		} else {
+			recv = reflect.ValueOf(wrapper.goObj).Elem()
+		}
+
+		goArgs[0] = recv
+		argIndex = 1
+	}
+
+	for i := 0; i < int(argc); i++ {
+		arg := C.PySequence_GetItem(args, C.Py_ssize_t(i))
+		argType := methodType.In(i + argIndex)
+		argPy := FromPy(arg)
+		goValue := reflect.New(argType).Elem()
+		if !ToValue(argPy, goValue) {
+			SetTypeError(fmt.Errorf("failed to convert argument %v to %v", argPy, argType))
+			return nil
+		}
+		goArgs[i+argIndex] = goValue
+	}
+
+	kwargsValue := make(KwArgs)
+	if kwargs != nil {
+		dict := newDict(kwargs)
+		dict.Items()(func(key, value Object) bool {
+			kwargsValue[key.String()] = value
+			return true
+		})
+	}
+	goArgs[len(goArgs)-1] = reflect.ValueOf(kwargsValue)
+
+	results := reflect.ValueOf(methodMeta.fn).Call(goArgs)
+
+	if len(results) == 0 {
+		return None().cpyObj()
+	}
+	if len(results) == 1 {
+		return From(results[0].Interface()).cpyObj()
+	}
+
+	tuple := MakeTupleWithLen(len(results))
+	for i := range results {
+		tuple.Set(i, From(results[i].Interface()))
+	}
+	return tuple.cpyObj()
 }
