@@ -1,6 +1,8 @@
 package gp
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -160,54 +162,111 @@ except TypeError:
 func TestCreateFunc(t *testing.T) {
 	setupTest(t)
 
-	// Test simple function
-	simpleFunc := func(x int) int {
-		return x * 2
-	}
-	f1 := CreateFunc("simple_func", simpleFunc, "Doubles the input value")
-	if f1.Nil() {
-		t.Fatal("Failed to create simple function")
-	}
-
-	// Test function with multiple arguments and return values
-	multiFunc := func(x int, y string) (int, string) {
-		return x * 2, y + y
-	}
-	f2 := CreateFunc("multi_func", multiFunc, "Returns doubled number and duplicated string")
-	if f2.Nil() {
-		t.Fatal("Failed to create function with multiple returns")
-	}
-
-	// Test the functions using Python code
-	code := `
-# Test simple function
+	tests := []struct {
+		name     string
+		fn       any
+		doc      string
+		testCode string
+	}{
+		{
+			name: "simple",
+			fn: func(x int) int {
+				return x * 2
+			},
+			doc: "Doubles the input value",
+			testCode: `
 result = simple_func(21)
 assert result == 42, f"Expected 42, got {result}"
-
-# Test multiple return values
-num, text = multi_func(5, "hello")
+assert str(inspect.signature(simple_func)) == "(arg0, /)"
+`,
+		},
+		{
+			name: "multi_args",
+			fn: func(x int, y string) (int, string) {
+				return x * 2, y + y
+			},
+			doc: "Returns doubled number and duplicated string",
+			testCode: `
+num, text = multi_args_func(5, "hello")
 assert num == 10, f"Expected 10, got {num}"
 assert text == "hellohello", f"Expected 'hellohello', got {text}"
+assert str(inspect.signature(multi_args_func)) == "(arg0, arg1, /)"
+`,
+		},
+		{
+			name: "with_kwargs",
+			fn: func(name string, kwargs KwArgs) Object {
+				return None()
+			},
+			doc: "Function with kwargs",
+			testCode: `
+result = with_kwargs_func("test", extra="value")
+assert result is None
+assert str(inspect.signature(with_kwargs_func)) == "(arg0, /, **kwargs)"
+`,
+		},
+		{
+			name: "no_args",
+			fn: func() string {
+				return "hello"
+			},
+			doc: "Function with no arguments",
+			testCode: `
+result = no_args_func()
+assert result == "hello"
+assert str(inspect.signature(no_args_func)) == "()"
+`,
+		},
+		{
+			name: "only_kwargs",
+			fn: func(kwargs KwArgs) Object {
+				return None()
+			},
+			doc: "Function with only kwargs",
+			testCode: `
+result = only_kwargs_func(x=1, y=2)
+assert result is None
+assert str(inspect.signature(only_kwargs_func)) == "(**kwargs)"
+`,
+		},
+	}
 
-# Test error handling - wrong argument type
-try:
-    simple_func("not a number")
-    assert False, "Should fail with wrong argument type"
-except TypeError:
-    pass
+	code := `
+import inspect
 
-# Test error handling - wrong number of arguments
-try:
-    simple_func(1, 2)
-    assert False, "Should fail with wrong number of arguments"
-except TypeError:
-    pass
 `
-
+	for _, tt := range tests {
+		funcName := tt.name + "_func"
+		f := CreateFunc(funcName, tt.fn, tt.doc)
+		if f.Nil() {
+			t.Fatalf("Failed to create function for test case: %s", tt.name)
+		}
+		code += tt.testCode + "\n"
+	}
+	t.Log(code)
 	err := RunString(code)
 	if err != nil {
 		t.Fatalf("Test failed: %v", err)
 	}
+
+	// Test failure cases
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("CreateFunc should panic with non-function argument")
+			}
+		}()
+		CreateFunc("invalid", 42, "should panic")
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("CreateFunc should panic with nil function")
+			}
+		}()
+		CreateFunc("nil_func", nil, "should panic")
+	}()
 }
 
 func TestCreateFuncInvalid(t *testing.T) {
@@ -225,75 +284,122 @@ func explicitFunc(x int) int {
 	return x + 1
 }
 
-func namedFunc(x string) string {
-	return "Hello " + x
-}
-
 func TestModuleAddMethod(t *testing.T) {
 	setupTest(t)
 	m := MainModule()
 
-	// Test with explicit name
-	f1 := m.AddMethod("", explicitFunc, " - adds one to input")
-	if f1.Nil() {
-		t.Fatal("Failed to create function with explicit name")
-	}
-
-	// Test with empty name (should use function name)
-	f2 := m.AddMethod("", namedFunc, " - adds greeting")
-	if f2.Nil() {
-		t.Fatal("Failed to create function with derived name")
-	}
-
-	// Test with anonymous function (should generate name)
-	f3 := m.AddMethod("", func(x, y int) int {
-		return x * y
-	}, " - multiplies two numbers")
-	if f3.Nil() {
-		t.Fatal("Failed to create anonymous function")
+	tests := []struct {
+		name     string
+		fn       any
+		doc      string
+		testCode string
+	}{
+		{
+			name: "explicit",
+			fn:   explicitFunc,
+			doc:  "adds one to input",
+			testCode: `
+result = explicit_func(41)
+assert result == 42, f"Expected 42, got {result}"
+assert str(inspect.signature(explicit_func)) == "(arg0, /)"
+`,
+		},
+		{
+			name: "with_kwargs",
+			fn: func(x int, kwargs KwArgs) int {
+				return x
+			},
+			doc: "function with kwargs",
+			testCode: `
+result = with_kwargs_func(42, extra="value")
+assert result == 42
+assert str(inspect.signature(with_kwargs_func)) == "(arg0, /, **kwargs)"
+`,
+		},
+		{
+			name: "multi_args",
+			fn: func(x, y int) int {
+				return x * y
+			},
+			doc: "multiplies two numbers",
+			testCode: `
+result = multi_args_func(6, 7)
+assert result == 42
+assert str(inspect.signature(multi_args_func)) == "(arg0, arg1, /)"
+`,
+		},
+		{
+			name: "no_args",
+			fn: func() string {
+				return "hello"
+			},
+			doc: "returns hello",
+			testCode: `
+result = no_args_func()
+assert result == "hello"
+assert str(inspect.signature(no_args_func)) == "()"
+`,
+		},
+		{
+			name: "only_kwargs",
+			fn: func(kwargs KwArgs) Object {
+				return None()
+			},
+			doc: "function with only kwargs",
+			testCode: `
+result = only_kwargs_func(x=1, y=2)
+assert result is None
+assert str(inspect.signature(only_kwargs_func)) == "(**kwargs)"
+`,
+		},
 	}
 
 	code := `
-# Test explicit named function
-result = explicit_func(41)
-assert result == 42, f"Expected 42, got {result}"
+import inspect
 
-# Test function with derived name
-result = named_func("World")
-assert result == "Hello World", f"Expected 'Hello World', got {result}"
-
-# Test documentation
-import sys
-if sys.version_info >= (3, 2):
-    assert explicit_func.__doc__.strip() == "explicit_func - adds one to input"
-    assert named_func.__doc__.strip() == "named_func - adds greeting"
-
-# Test error cases
-try:
-    explicit_func("wrong type")
-    assert False, "Should fail with wrong argument type"
-except TypeError:
-    pass
-
-try:
-    explicit_func(1, 2)
-    assert False, "Should fail with wrong number of arguments"
-except TypeError:
-    pass
 `
+	for _, tt := range tests {
+		funcName := tt.name + "_func"
+		f := m.AddMethod(funcName, tt.fn, tt.doc)
+		if f.Nil() {
+			t.Fatalf("Failed to create function for test case: %s", tt.name)
+		}
+		code += tt.testCode + "\n"
+	}
 
+	t.Log(code)
 	err := RunString(code)
 	if err != nil {
 		t.Fatalf("Test failed: %v", err)
 	}
 
-	// Test invalid function type
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("AddMethod should panic with non-function argument")
-		}
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("AddMethod should panic with non-function argument")
+			}
+		}()
+		m.AddMethod("invalid", 42, "should panic")
 	}()
-	m.AddMethod("invalid", "not a function", "")
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("AddMethod should panic with nil function")
+			}
+		}()
+		m.AddMethod("nil_func", nil, "should panic")
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("AddMethod should panic with empty module")
+			}
+		}()
+		var emptyModule Module
+		emptyModule.AddMethod("empty", func() {}, "should panic")
+	}()
 }
 
 func TestAddTypeWithPtrReceiverInit(t *testing.T) {
@@ -835,5 +941,178 @@ assert obj.field.string_val == "test"
 	err := RunString(code)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGenSig(t *testing.T) {
+	type CustomStruct struct {
+		Value int
+	}
+
+	tests := []struct {
+		name        string
+		fn          any
+		hasRecv     bool
+		expectedSig string
+	}{
+		{
+			name:        "function with return",
+			fn:          func(x int) string { return "" },
+			hasRecv:     false,
+			expectedSig: "(arg0, /)",
+		},
+		{
+			name:        "multiple arguments",
+			fn:          func(x string, y int) (int, string) { return 0, "" },
+			hasRecv:     false,
+			expectedSig: "(arg0, arg1, /)",
+		},
+		{
+			name:        "with kwargs",
+			fn:          func(name string, kwargs KwArgs) Object { return None() },
+			hasRecv:     false,
+			expectedSig: "(arg0, /, **kwargs)",
+		},
+		{
+			name:        "method with receiver",
+			fn:          func(r *CustomStruct, x int) float64 { return 0 },
+			hasRecv:     true,
+			expectedSig: "(arg0, /)",
+		},
+		{
+			name:        "no arguments",
+			fn:          func() {},
+			hasRecv:     false,
+			expectedSig: "()",
+		},
+		{
+			name:        "only kwargs",
+			fn:          func(kwargs KwArgs) {},
+			hasRecv:     false,
+			expectedSig: "(**kwargs)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := genSig(tt.fn, tt.hasRecv)
+			if got != tt.expectedSig {
+				t.Errorf("genSig() = %q, want %q", got, tt.expectedSig)
+			}
+		})
+	}
+}
+
+func TestCreateFuncNaming(t *testing.T) {
+	setupTest(t)
+
+	tests := []struct {
+		name         string
+		givenName    string
+		fn           any
+		doc          string
+		expectedName string
+	}{
+		{
+			name:         "explicit name",
+			givenName:    "my_func",
+			fn:           func(x int) int { return x },
+			doc:          "test function",
+			expectedName: "my_func",
+		},
+		{
+			name:         "empty name uses function name",
+			givenName:    "",
+			fn:           explicitFunc,
+			doc:          "test function",
+			expectedName: "explicit_func",
+		},
+		{
+			name:         "camelCase to snake_case",
+			givenName:    "camelCaseName",
+			fn:           func() {},
+			doc:          "test function",
+			expectedName: "camel_case_name",
+		},
+		{
+			name:         "package path stripped",
+			givenName:    "github.com/user/pkg.MyFunc",
+			fn:           func() {},
+			doc:          "test function",
+			expectedName: "my_func",
+		},
+	}
+
+	for _, tt := range tests {
+		func() {
+			f := CreateFunc(tt.givenName, tt.fn, tt.doc)
+			if f.Nil() {
+				t.Fatal("Failed to create function")
+			}
+
+			code := fmt.Sprintf(`
+assert "%s" in globals(), "Function %s not found in globals"
+assert callable(globals()["%s"]), "Function %s is not callable"
+`, tt.expectedName, tt.expectedName, tt.expectedName, tt.expectedName)
+
+			err := RunString(code)
+			if err != nil {
+				t.Fatalf("Test failed: %v", err)
+			}
+		}()
+	}
+}
+
+func TestAddMethodNaming(t *testing.T) {
+	setupTest(t)
+	m := MainModule()
+
+	tests := []struct {
+		name         string
+		givenName    string
+		fn           any
+		doc          string
+		expectedName string
+	}{
+		{
+			name:         "explicit name",
+			givenName:    "my_method",
+			fn:           func(x int) int { return x },
+			doc:          "test method",
+			expectedName: "my_method",
+		},
+		{
+			name:         "empty name uses function name",
+			givenName:    "",
+			fn:           explicitFunc,
+			doc:          "test method",
+			expectedName: "explicit_func",
+		},
+		{
+			name:         "anonymous function gets generated name",
+			givenName:    "",
+			fn:           func() {},
+			doc:          "test method",
+			expectedName: "func",
+		},
+		{
+			name:         "camelCase to snake_case",
+			givenName:    "myMethodName",
+			fn:           func() {},
+			doc:          "test method",
+			expectedName: "my_method_name",
+		},
+	}
+
+	for _, tt := range tests {
+		func() {
+			f := m.AddMethod(tt.givenName, tt.fn, tt.doc)
+			if f.Nil() {
+				t.Fatal("Failed to create method")
+			}
+			if !strings.HasPrefix(f.Name(), tt.expectedName) {
+				t.Errorf("Expected method name to start with %s, got %s", tt.expectedName, f.Name())
+			}
+		}()
 	}
 }

@@ -3,7 +3,12 @@
 
 #define WRAP_METHOD(ida, idb)                                                  \
 PyObject *wrapperMethod##ida##idb(PyObject *self, PyObject *args) {          \
-	return wrapperMethod(self, args, 0x##ida * 16 + 0x##idb); \
+	return wrapperMethod(self, args, 0x##ida * 16 + 0x##idb);                  \
+}
+
+#define WRAP_METHOD_WITH_KWARGS(ida, idb)                                                  \
+PyObject *wrapperMethodWithKwargs##ida##idb(PyObject *self, PyObject *args, PyObject *kwargs) {          \
+	return wrapperMethodWithKwargs(self, args, kwargs, 0x##ida * 16 + 0x##idb); \
 }
 
 #define WRAP_METHODS(ida)                                                      \
@@ -24,6 +29,24 @@ PyObject *wrapperMethod##ida##idb(PyObject *self, PyObject *args) {          \
   WRAP_METHOD(ida, e)                                                          \
   WRAP_METHOD(ida, f)
 
+#define WRAP_METHODS_WITH_KWARGS(ida)                                                      \
+  WRAP_METHOD_WITH_KWARGS(ida, 0)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 1)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 2)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 3)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 4)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 5)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 6)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 7)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 8)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, 9)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, a)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, b)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, c)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, d)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, e)                                                          \
+  WRAP_METHOD_WITH_KWARGS(ida, f)
+
 #define WRAP_METHOD_ALL() \
 	WRAP_METHODS(0) \
 	WRAP_METHODS(1) \
@@ -42,9 +65,29 @@ PyObject *wrapperMethod##ida##idb(PyObject *self, PyObject *args) {          \
 	WRAP_METHODS(e) \
 	WRAP_METHODS(f)
 
+#define WRAP_METHOD_ALL_WITH_KWARGS() \
+	WRAP_METHODS_WITH_KWARGS(0) \
+	WRAP_METHODS_WITH_KWARGS(1) \
+	WRAP_METHODS_WITH_KWARGS(2) \
+	WRAP_METHODS_WITH_KWARGS(3) \
+	WRAP_METHODS_WITH_KWARGS(4) \
+	WRAP_METHODS_WITH_KWARGS(5) \
+	WRAP_METHODS_WITH_KWARGS(6) \
+	WRAP_METHODS_WITH_KWARGS(7) \
+	WRAP_METHODS_WITH_KWARGS(8) \
+	WRAP_METHODS_WITH_KWARGS(9) \
+	WRAP_METHODS_WITH_KWARGS(a) \
+	WRAP_METHODS_WITH_KWARGS(b) \
+	WRAP_METHODS_WITH_KWARGS(c) \
+	WRAP_METHODS_WITH_KWARGS(d) \
+	WRAP_METHODS_WITH_KWARGS(e) \
+	WRAP_METHODS_WITH_KWARGS(f)
+
 WRAP_METHOD_ALL()
+WRAP_METHOD_ALL_WITH_KWARGS()
 
 #define WARP_METHOD_NAME(ida, idb) wrapperMethod##ida##idb,
+#define WARP_METHOD_NAME_WITH_KWARGS(ida, idb) wrapperMethodWithKwargs##ida##idb,
 
 #define WARP_METHOD_NAMES(ida) \
 	WARP_METHOD_NAME(ida, 0) \
@@ -64,6 +107,25 @@ WRAP_METHOD_ALL()
 	WARP_METHOD_NAME(ida, e) \
 	WARP_METHOD_NAME(ida, f)
 
+
+#define WARP_METHOD_NAMES_WITH_KWARGS(ida) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 0) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 1) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 2) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 3) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 4) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 5) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 6) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 7) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 8) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, 9) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, a) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, b) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, c) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, d) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, e) \
+	WARP_METHOD_NAME_WITH_KWARGS(ida, f)
+
 #define WARP_METHOD_NAMES_ALL() \
 	WARP_METHOD_NAMES(0) \
 	WARP_METHOD_NAMES(1) \
@@ -82,8 +144,31 @@ WRAP_METHOD_ALL()
 	WARP_METHOD_NAMES(e) \
 	WARP_METHOD_NAMES(f)
 
+
+#define WARP_METHOD_NAMES_ALL_WITH_KWARGS() \
+	WARP_METHOD_NAMES_WITH_KWARGS(0) \
+	WARP_METHOD_NAMES_WITH_KWARGS(1) \
+	WARP_METHOD_NAMES_WITH_KWARGS(2) \
+	WARP_METHOD_NAMES_WITH_KWARGS(3) \
+	WARP_METHOD_NAMES_WITH_KWARGS(4) \
+	WARP_METHOD_NAMES_WITH_KWARGS(5) \
+	WARP_METHOD_NAMES_WITH_KWARGS(6) \
+	WARP_METHOD_NAMES_WITH_KWARGS(7) \
+	WARP_METHOD_NAMES_WITH_KWARGS(8) \
+	WARP_METHOD_NAMES_WITH_KWARGS(9) \
+	WARP_METHOD_NAMES_WITH_KWARGS(a) \
+	WARP_METHOD_NAMES_WITH_KWARGS(b) \
+	WARP_METHOD_NAMES_WITH_KWARGS(c) \
+	WARP_METHOD_NAMES_WITH_KWARGS(d) \
+	WARP_METHOD_NAMES_WITH_KWARGS(e) \
+	WARP_METHOD_NAMES_WITH_KWARGS(f)
+
 PyObject* (*wrapperMethods[256])(PyObject *self, PyObject *args) = {
 	WARP_METHOD_NAMES_ALL()
+};
+
+PyObject* (*wrapperMethodsWithKwargs[256])(PyObject *self, PyObject *args, PyObject *kwargs) = {
+	WARP_METHOD_NAMES_ALL_WITH_KWARGS()
 };
 
 #define GETTER_METHOD(ida, idb) \

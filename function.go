@@ -23,6 +23,10 @@ func (f Func) Ensure() {
 	f.pyObject.Ensure()
 }
 
+func (f Func) Name() string {
+	return f.AttrString("__name__").String()
+}
+
 func (f Func) call(args Tuple, kwargs Dict) Object {
 	return newObject(C.PyObject_Call(f.obj, args.obj, kwargs.obj))
 }

@@ -258,7 +258,7 @@ demo.launch()
 
 var gr Module
 
-func UpdateExamples(country string) Object {
+func updateExamples(country string) Object {
 	println("country:", country)
 	if country == "USA" {
 		return gr.Call("Dataset", KwArgs{
@@ -280,10 +280,6 @@ func main() {
 	Initialize()
 	defer Finalize()
 	gr = ImportModule("gradio")
-	fn := CreateFunc("update_examples", UpdateExamples,
-		"(country, /)\n--\n\nUpdate examples based on country")
-	// Would be (in the future):
-	// fn := FuncOf(UpdateExamples)
 	demo := With(gr.Call("Blocks"), func(v Object) {
 		dropdown := gr.Call("Dropdown", KwArgs{
 			"label":   "Country",
@@ -293,7 +289,7 @@ func main() {
 		textbox := gr.Call("Textbox")
 		examples := gr.Call("Examples", [][]string{{"Chicago"}, {"Little Rock"}, {"San Francisco"}}, textbox)
 		dataset := examples.Attr("dataset")
-		dropdown.Call("change", fn, dropdown, dataset)
+		dropdown.Call("change", updateExamples, dropdown, dataset)
 	})
 	demo.Call("launch")
 }

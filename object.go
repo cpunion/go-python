@@ -29,6 +29,10 @@ func (o *pyObject) Nil() bool {
 	return o == nil
 }
 
+func (o *pyObject) RefCount() int {
+	return int(C.Py_REFCNT(o.obj))
+}
+
 func (o *pyObject) Ensure() {
 	if o == nil {
 		C.PyErr_Print()
@@ -161,6 +165,12 @@ func (o Object) IsTuple() bool {
 
 func (o Object) IsDict() bool {
 	return C.Py_IS_TYPE(o.obj, &C.PyDict_Type) != 0
+}
+
+func (o Object) IsFunc() bool {
+	return C.Py_IS_TYPE(o.obj, &C.PyFunction_Type) != 0 ||
+		C.Py_IS_TYPE(o.obj, &C.PyMethod_Type) != 0 ||
+		C.Py_IS_TYPE(o.obj, &C.PyCFunction_Type) != 0
 }
 
 func (o Object) AsFloat() Float {

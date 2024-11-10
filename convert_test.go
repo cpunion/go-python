@@ -197,6 +197,61 @@ func TestFromSpecialCases(t *testing.T) {
 			t.Errorf("Object was not independent, got %d after modifying original", got)
 		}
 	}()
+
+	func() {
+		// Test From with functions
+		add := func(a, b int) int { return a + b }
+		obj := From(add)
+
+		// Verify it's a function type
+		if !obj.IsFunc() {
+			t.Error("From(func) did not create Function object")
+		}
+
+		fn := obj.AsFunc()
+
+		// Test function call
+		result := fn.Call(5, 3)
+
+		if !result.IsLong() {
+			t.Error("Function call result is not a Long")
+		}
+		if got := result.AsLong().Int64(); got != 8 {
+			t.Errorf("Function call = %d, want 8", got)
+		}
+	}()
+
+	func() {
+		// Test From with function that returns multiple values
+		divMod := func(a, b int) (int, int) {
+			return a / b, a % b
+		}
+		obj := From(divMod)
+		if !obj.IsFunc() {
+			t.Error("From(func) did not create Function object")
+		}
+
+		fn := obj.AsFunc()
+
+		result := fn.Call(7, 3)
+
+		// Result should be a tuple with two values
+		if !result.IsTuple() {
+			t.Error("Multiple return value function did not return a Tuple")
+		}
+
+		tuple := result.AsTuple()
+		if tuple.Len() != 2 {
+			t.Errorf("Expected tuple of length 2, got %d", tuple.Len())
+		}
+
+		quotient := tuple.Get(0).AsLong().Int64()
+		remainder := tuple.Get(1).AsLong().Int64()
+
+		if quotient != 2 || remainder != 1 {
+			t.Errorf("Got (%d, %d), want (2, 1)", quotient, remainder)
+		}
+	}()
 }
 
 func TestToValueWithCustomType(t *testing.T) {

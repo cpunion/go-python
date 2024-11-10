@@ -6,6 +6,9 @@
 extern PyObject *wrapperMethod(PyObject *self, PyObject *args, int methodId);
 extern PyObject *(*wrapperMethods[256])(PyObject *self, PyObject *args);
 
+extern PyObject *wrapperMethodWithKwargs(PyObject *self, PyObject *args, PyObject *kwargs, int methodId);
+extern PyObject *(*wrapperMethodsWithKwargs[256])(PyObject *self, PyObject *args, PyObject *kwargs);
+
 extern PyObject *getterMethod(PyObject *self, void *closure, int methodId);
 extern int setterMethod(PyObject *self, PyObject *value, void *closure, int methodId);
 
@@ -18,8 +21,11 @@ extern setter setterMethods[256];
 #define DECLARE_SETTER_METHOD(ida, idb) \
     extern int setterMethod##ida##idb(PyObject* self, PyObject* value, void* closure);
 
-#define DECLARE_WRAP_METHOD(ida, idb) \
-	extern PyObject* wrapperMethod##ida##idb(PyObject* self, PyObject* args);
+#define DECLARE_WRAP_METHOD(ida, idb)                                          \
+    extern PyObject *wrapperMethod##ida##idb(PyObject *self, PyObject *args);
+
+#define DECLARE_WRAP_METHOD_WITH_KWARGS(ida, idb)                              \
+    extern PyObject *wrapperMethodWithKwargs##ida##idb(PyObject *self, PyObject *args, PyObject *kwargs);
 
 #define DECLARE_WRAP_METHODS(ida)                                              \
   DECLARE_WRAP_METHOD(ida, 0)                                                  \
@@ -39,6 +45,24 @@ extern setter setterMethods[256];
   DECLARE_WRAP_METHOD(ida, e)                                                  \
   DECLARE_WRAP_METHOD(ida, f)
 
+#define DECLARE_WRAP_METHODS_WITH_KWARGS(ida)                                              \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 0)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 1)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 2)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 3)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 4)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 5)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 6)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 7)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 8)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, 9)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, a)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, b)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, c)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, d)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, e)                                                  \
+  DECLARE_WRAP_METHOD_WITH_KWARGS(ida, f)
+
 #define DECLARE_WRAPPER_ALL_METHODS() \
 	DECLARE_WRAP_METHODS(0) \
 	DECLARE_WRAP_METHODS(1) \
@@ -57,8 +81,26 @@ extern setter setterMethods[256];
 	DECLARE_WRAP_METHODS(e) \
 	DECLARE_WRAP_METHODS(f)
 
-DECLARE_WRAPPER_ALL_METHODS()
+#define DECLARE_WRAPPER_ALL_METHODS_WITH_KWARGS() \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(0) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(1) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(2) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(3) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(4) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(5) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(6) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(7) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(8) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(9) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(a) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(b) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(c) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(d) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(e) \
+	DECLARE_WRAP_METHODS_WITH_KWARGS(f)
 
+DECLARE_WRAPPER_ALL_METHODS()
+DECLARE_WRAPPER_ALL_METHODS_WITH_KWARGS()
 
 #define DECLARE_GETTER_METHODS(ida) \
     DECLARE_GETTER_METHOD(ida, 0) \
