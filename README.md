@@ -31,10 +31,10 @@
     - [x] Keyword arguments.
     - [x] Mapping arguments and return values.
     - [ ] Default arguments.
-- [ ] Call Go in Python.
+- [x] Call Go in Python.
   - [x] Export Go functions, struct types to Python.
   - [x] Auto export field types if it's a struct.
-  - [ ] Auto generate function signatures (used by gradio).
+  - [x] Auto generate function signatures (used by gradio).
 - [x] Basic tests on common used libraries.
   - [x] matplotlib
   - [x] gradio
