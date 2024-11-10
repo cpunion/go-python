@@ -232,6 +232,7 @@ point.print()
 package main
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/cpunion/go-python"
@@ -273,8 +274,9 @@ func updateExamples(country string) Object {
 
 func main() {
 	if len(os.Args) > 2 {
-		// avoid gradio start subprocesses
-		return
+		// start subprocesses
+		fmt.Println("start subprocess:", os.Args)
+		os.Exit(RunMain(os.Args))
 	}
 
 	Initialize()

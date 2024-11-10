@@ -111,6 +111,15 @@ func RunString(code string) error {
 	return nil
 }
 
+func RunMain(args []string) int {
+	argc := len(args)
+	argv := make([]*C.char, argc+1)
+	for i, arg := range args {
+		argv[i] = AllocCStr(arg)
+	}
+	return int(C.Py_BytesMain(C.int(argc), &argv[0]))
+}
+
 // ----------------------------------------------------------------------------
 
 func check(b bool, msg string) {
