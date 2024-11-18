@@ -135,11 +135,11 @@ func downloadFileWithCache(url string) (string, error) {
 
 	// Check if file exists in cache
 	if _, err := os.Stat(cachedFile); err == nil {
-		fmt.Printf("Using cached Python from %s\n", cachedFile)
+		fmt.Printf("Using cached file from %s\n", cachedFile)
 		return cachedFile, nil
 	}
 
-	fmt.Printf("Downloading Python from %s\n", url)
+	fmt.Printf("Downloading from %s\n", url)
 
 	// Create temporary file
 	tmpFile, err := os.CreateTemp(cacheDir, "download-*")
@@ -233,7 +233,7 @@ func updateMacOSDylibs(pythonDir string, verbose bool) error {
 }
 
 // extractTarZst extracts a tar.zst file to a destination directory
-func extractTarZst(src, dst string, verbose bool) error {
+func extractTarZst(src, dst, trimPrefix string, verbose bool) error {
 	if verbose {
 		fmt.Printf("Extracting from %s to %s\n", src, dst)
 	}
@@ -264,15 +264,18 @@ func extractTarZst(src, dst string, verbose bool) error {
 			return err
 		}
 
-		// Only extract files from the install directory
-		if !strings.HasPrefix(header.Name, "python/install/") {
-			continue
-		}
+		name := header.Name
 
-		// Remove the "python/install/" prefix
-		name := strings.TrimPrefix(header.Name, "python/install/")
-		if name == "" {
-			continue
+		if trimPrefix != "" {
+			if !strings.HasPrefix(header.Name, trimPrefix) {
+				continue
+			}
+
+			// Remove the trimPrefix prefix
+			name = strings.TrimPrefix(header.Name, trimPrefix)
+			if name == "" {
+				continue
+			}
 		}
 
 		path := filepath.Join(dst, name)
@@ -512,7 +515,7 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 		fmt.Println("Extracting Python...")
 	}
 	// Extract to .python directory
-	if err := extractTarZst(archivePath, pythonDir, verbose); err != nil {
+	if err := extractTarZst(archivePath, pythonDir, "python/install/", verbose); err != nil {
 		return fmt.Errorf("error extracting Python: %v", err)
 	}
 

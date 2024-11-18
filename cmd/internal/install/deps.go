@@ -4,10 +4,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 )
 
 // Dependencies installs all required dependencies for the project
 func Dependencies(projectPath string, goVersion, pyVersion, pyBuildDate string, freeThreaded, debug bool, verbose bool) error {
+	// Only install MSYS2 on Windows
+	if runtime.GOOS == "windows" {
+		if err := installMsys2(projectPath, verbose); err != nil {
+			return err
+		}
+	}
+
 	if err := installGo(projectPath, goVersion, verbose); err != nil {
 		return err
 	}
