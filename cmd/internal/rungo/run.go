@@ -2,6 +2,7 @@ package rungo
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,11 @@ import (
 
 	"github.com/cpunion/go-python/cmd/internal/install"
 )
+
+type ListInfo struct {
+	Dir  string `json:"Dir"`
+	Root string `json:"Root"`
+}
 
 // FindPackageIndex finds the package argument index by skipping flags and their values
 func FindPackageIndex(args []string) int {
@@ -64,30 +70,33 @@ func GetPackageDir(pkgPath string) (string, error) {
 
 // RunGoCommand executes a Go command with Python environment properly configured
 func RunGoCommand(command string, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("package argument is required")
-	}
-
 	// Find the package argument
 	pkgIndex := FindPackageIndex(args)
-	if pkgIndex == -1 {
-		return fmt.Errorf("package argument is required")
-	}
 
-	// Get the package path
-	pkgPath := args[pkgIndex]
+	listArgs := []string{"list", "-json"}
 
-	// Get package directory
-	dir, err := GetPackageDir(pkgPath)
-	if err != nil {
-		return err
+	if pkgIndex != -1 {
+		pkgPath := args[pkgIndex]
+		listArgs = append(listArgs, pkgPath)
 	}
+	cmd := exec.Command("go", listArgs...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to get module info: %v", err)
+	}
+	var listInfo ListInfo
+	if err := json.NewDecoder(&out).Decode(&listInfo); err != nil {
+		return fmt.Errorf("failed to parse module info: %v", err)
+	}
+	projectRoot := listInfo.Root
 
 	// Set up environment variables
 	env := os.Environ()
 
 	// Load additional environment variables from env.txt
-	if additionalEnv, err := install.LoadEnvFile(dir); err == nil {
+	if additionalEnv, err := install.LoadEnvFile(projectRoot); err == nil {
 		env = append(env, additionalEnv...)
 	} else {
 		fmt.Fprintf(os.Stderr, "Warning: could not load environment variables: %v\n", err)
@@ -102,8 +111,7 @@ func RunGoCommand(command string, args []string) error {
 
 	// Prepare go command with processed arguments
 	goArgs := append([]string{command}, processedArgs...)
-	cmd := exec.Command("go", goArgs...)
-	cmd.Dir = dir
+	cmd = exec.Command("go", goArgs...)
 	cmd.Env = env
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
