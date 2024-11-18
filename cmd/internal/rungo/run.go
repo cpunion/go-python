@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/cpunion/go-python/cmd/internal/install"
@@ -95,23 +96,28 @@ func RunGoCommand(command string, args []string) error {
 	// Set up environment variables
 	env := os.Environ()
 
-	// Load additional environment variables from env.txt
+	// Get PYTHONPATH and PYTHONHOME from env.txt
+	var pythonPath, pythonHome string
 	if additionalEnv, err := install.LoadEnvFile(projectRoot); err == nil {
 		env = append(env, additionalEnv...)
+		// Extract PYTHONPATH and PYTHONHOME from additionalEnv
+		for _, envVar := range additionalEnv {
+			if strings.HasPrefix(envVar, "PYTHONPATH=") {
+				pythonPath = strings.TrimPrefix(envVar, "PYTHONPATH=")
+			} else if strings.HasPrefix(envVar, "PYTHONHOME=") {
+				pythonHome = strings.TrimPrefix(envVar, "PYTHONHOME=")
+			}
+		}
 	} else {
 		fmt.Fprintf(os.Stderr, "Warning: could not load environment variables: %v\n", err)
 	}
-
-	// Get PYTHONPATH and PYTHONHOME from environment
-	pythonPath := os.Getenv("PYTHONPATH")
-	pythonHome := os.Getenv("PYTHONHOME")
 
 	// Process args to inject Python paths via ldflags
 	processedArgs := ProcessArgsWithLDFlags(args, pythonPath, pythonHome)
 
 	// Prepare go command with processed arguments
-	goArgs := append([]string{command}, processedArgs...)
-	cmd = exec.Command("go", goArgs...)
+	goArgs := append([]string{"go", command}, processedArgs...)
+	cmd = exec.Command(goArgs[0], goArgs[1:]...)
 	cmd.Env = env
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -132,15 +138,40 @@ func RunGoCommand(command string, args []string) error {
 
 // ProcessArgsWithLDFlags processes command line arguments to inject Python paths via ldflags
 func ProcessArgsWithLDFlags(args []string, pythonPath, pythonHome string) []string {
-	result := make([]string, 0, len(args)+4) // reserve space for potential new flags
-	result = append(result, args...)
+	result := make([]string, 0, len(args)+6) // Reserve space for potential new flags
 
+	// Add Python path if provided
 	if pythonPath != "" {
 		result = append(result, "-ldflags", fmt.Sprintf("-X 'github.com/cpunion/go-python.PythonPath=%s'", pythonPath))
 	}
+
+	// Add Python home if provided
 	if pythonHome != "" {
 		result = append(result, "-ldflags", fmt.Sprintf("-X 'github.com/cpunion/go-python.PythonHome=%s'", pythonHome))
+		// Add rpath to Python lib directory
+		pythonLibDir := filepath.Join(pythonHome, "lib")
+
+		var rpathFlag string
+		switch runtime.GOOS {
+		case "darwin":
+			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath,%s'", pythonLibDir)
+		case "linux":
+			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath=%s'", pythonLibDir)
+		case "windows":
+			// Windows doesn't use rpath
+			rpathFlag = ""
+		default:
+			// Use Linux format for other Unix-like systems
+			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath=%s'", pythonLibDir)
+		}
+
+		if rpathFlag != "" {
+			result = append(result, "-ldflags", rpathFlag)
+		}
 	}
+
+	// Append original args after our flags
+	result = append(result, args...)
 
 	return result
 }
