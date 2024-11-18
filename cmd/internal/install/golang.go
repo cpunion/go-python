@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -52,8 +51,8 @@ func getGoURL(version string) string {
 
 // installGo downloads and installs Go in the project directory
 func installGo(projectPath, version string, verbose bool) error {
-	fmt.Printf("Installing Go %s in %s\n", version, projectPath)
 	goDir := filepath.Join(projectPath, DepsDir, GoDir)
+	fmt.Printf("Installing Go %s in %s\n", version, goDir)
 
 	// Create Go directory if it doesn't exist
 	if err := os.MkdirAll(goDir, 0755); err != nil {
@@ -70,27 +69,8 @@ func installGo(projectPath, version string, verbose bool) error {
 		fmt.Printf("Downloading Go %s from %s\n", version, url)
 	}
 
-	// Download Go
-	resp, err := http.Get(url)
+	path, err := downloadFileWithCache(url)
 	if err != nil {
-		return fmt.Errorf("error downloading Go: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error downloading Go: %s", resp.Status)
-	}
-
-	// Create temporary file
-	tmpFile, err := os.CreateTemp("", "go-*.tmp")
-	if err != nil {
-		return fmt.Errorf("error creating temporary file: %v", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
-
-	// Copy download to temporary file
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
 		return fmt.Errorf("error downloading Go: %v", err)
 	}
 
@@ -99,12 +79,12 @@ func installGo(projectPath, version string, verbose bool) error {
 	}
 
 	// Extract based on file extension
-	if strings.HasSuffix(url, ".zip") {
-		if err := extractZip(tmpFile.Name(), goDir); err != nil {
+	if strings.HasSuffix(path, ".zip") {
+		if err := extractZip(path, goDir); err != nil {
 			return fmt.Errorf("error extracting Go: %v", err)
 		}
-	} else if strings.HasSuffix(url, ".tar.gz") {
-		if err := extractTarGz(tmpFile.Name(), goDir); err != nil {
+	} else if strings.HasSuffix(path, ".tar.gz") {
+		if err := extractTarGz(path, goDir); err != nil {
 			return fmt.Errorf("error extracting Go: %v", err)
 		}
 	}

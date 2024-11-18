@@ -527,25 +527,12 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 	// Create Python environment
 	env := python.New(pythonDir)
 
-	// Make sure pip is executable
-	pipPath, err := env.Pip()
-	if err != nil {
-		return fmt.Errorf("error finding pip: %v", err)
-	}
-
-	if runtime.GOOS != "windows" {
-		if err := os.Chmod(pipPath, 0755); err != nil {
-			return fmt.Errorf("error making pip executable: %v", err)
-		}
-	}
-
 	if verbose {
-		fmt.Printf("Using pip at: %s\n", pipPath)
 		fmt.Println("Installing Python dependencies...")
 	}
 
 	if err := env.RunPip("install", "--upgrade", "pip", "setuptools", "wheel"); err != nil {
-		return fmt.Errorf("error upgrading pip: %v", err)
+		return fmt.Errorf("error upgrading pip, setuptools, whell")
 	}
 
 	if err := updatePkgConfig(projectPath); err != nil {

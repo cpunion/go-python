@@ -23,7 +23,10 @@ func New(pythonHome string) *Env {
 
 // Python returns the path to the Python executable
 func (e *Env) Python() (string, error) {
-	binDir := filepath.Join(e.Root, "bin")
+	binDir := e.Root
+	if runtime.GOOS != "windows" {
+		binDir = filepath.Join(e.Root, "bin")
+	}
 	entries, err := os.ReadDir(binDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to read bin directory: %v", err)
@@ -46,41 +49,9 @@ func (e *Env) Python() (string, error) {
 	return "", fmt.Errorf("python executable not found in %s", e.Root)
 }
 
-// Pip returns the path to the pip executable
-func (e *Env) Pip() (string, error) {
-	if runtime.GOOS == "windows" {
-		pipPath := filepath.Join(e.Root, "bin", "pip3.exe")
-		if _, err := os.Stat(pipPath); err == nil {
-			return pipPath, nil
-		}
-		pipPath = filepath.Join(e.Root, "bin", "pip.exe")
-		if _, err := os.Stat(pipPath); err == nil {
-			return pipPath, nil
-		}
-	} else {
-		pipPath := filepath.Join(e.Root, "bin", "pip3")
-		if _, err := os.Stat(pipPath); err == nil {
-			return pipPath, nil
-		}
-		pipPath = filepath.Join(e.Root, "bin", "pip")
-		if _, err := os.Stat(pipPath); err == nil {
-			return pipPath, nil
-		}
-	}
-	return "", fmt.Errorf("pip executable not found in %s", e.Root)
-}
-
 // RunPip executes pip with the given arguments
 func (e *Env) RunPip(args ...string) error {
-	pipPath, err := e.Pip()
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command(pipPath, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return e.RunPython(append([]string{"-m", "pip"}, args...)...)
 }
 
 // RunPython executes python with the given arguments

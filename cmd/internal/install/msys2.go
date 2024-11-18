@@ -13,6 +13,7 @@ const (
 
 func installMsys2(projectPath string, verbose bool) error {
 	msys2Root := GetMsys2Dir(projectPath)
+	fmt.Printf("Installing msys2 in %v\n", msys2Root)
 
 	msys2Version := strings.ReplaceAll(releaseTag, "-", "")
 	msys2URL := fmt.Sprintf("https://github.com/msys2/msys2-installer/releases/download/%s/msys2-base-x86_64-%s.tar.zst", releaseTag, msys2Version)
@@ -25,7 +26,6 @@ func installMsys2(projectPath string, verbose bool) error {
 	if err != nil {
 		return fmt.Errorf("error downloading MSYS2: %v", err)
 	}
-	fmt.Printf("Downloaded MSYS2 to %s\n", path)
 
 	if verbose {
 		fmt.Println("Extracting MSYS2...")
