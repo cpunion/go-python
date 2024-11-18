@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetPythonURL(t *testing.T) {
-	  files := `cpython-3.10.15+20241016-aarch64-apple-darwin-debug-full.tar.zst
+	files := `cpython-3.10.15+20241016-aarch64-apple-darwin-debug-full.tar.zst
 cpython-3.10.15+20241016-aarch64-apple-darwin-install_only.tar.gz
 cpython-3.10.15+20241016-aarch64-apple-darwin-install_only_stripped.tar.gz
 cpython-3.10.15+20241016-aarch64-apple-darwin-pgo+lto-full.tar.zst
@@ -480,94 +480,94 @@ cpython-3.9.20+20241016-x86_64_v4-unknown-linux-musl-lto-full.tar.zst
 cpython-3.9.20+20241016-x86_64_v4-unknown-linux-musl-noopt-full.tar.zst
   `
 	tests := []struct {
-		name        string
-		arch        string
-		os          string
+		name         string
+		arch         string
+		os           string
 		freeThreaded bool
-		debug       bool
-		want        string
-		wantErr     bool
+		debug        bool
+		want         string
+		wantErr      bool
 	}{
 		{
-			name:        "darwin-arm64-freethreaded-debug",
-			arch:        "arm64",
-			os:          "darwin",
+			name:         "darwin-arm64-freethreaded-debug",
+			arch:         "arm64",
+			os:           "darwin",
 			freeThreaded: true,
-			debug:       true,
-			want:        "cpython-3.13.0+20241016-aarch64-apple-darwin-freethreaded+debug-full.tar.zst",
+			debug:        true,
+			want:         "cpython-3.13.0+20241016-aarch64-apple-darwin-freethreaded+debug-full.tar.zst",
 		},
 		{
-			name:        "darwin-amd64-freethreaded-pgo",
-			arch:        "amd64",
-			os:          "darwin",
+			name:         "darwin-amd64-freethreaded-pgo",
+			arch:         "amd64",
+			os:           "darwin",
 			freeThreaded: true,
-			debug:       false,
-			want:        "cpython-3.13.0+20241016-x86_64-apple-darwin-freethreaded+pgo-full.tar.zst",
+			debug:        false,
+			want:         "cpython-3.13.0+20241016-x86_64-apple-darwin-freethreaded+pgo-full.tar.zst",
 		},
 		{
-			name:        "darwin-amd64-debug",
-			arch:        "amd64",
-			os:          "darwin",
+			name:         "darwin-amd64-debug",
+			arch:         "amd64",
+			os:           "darwin",
 			freeThreaded: false,
-			debug:       true,
-			want:        "cpython-3.13.0+20241016-x86_64-apple-darwin-debug-full.tar.zst",
+			debug:        true,
+			want:         "cpython-3.13.0+20241016-x86_64-apple-darwin-debug-full.tar.zst",
 		},
 		{
-			name:        "darwin-amd64-pgo",
-			arch:        "amd64",
-			os:          "darwin",
+			name:         "darwin-amd64-pgo",
+			arch:         "amd64",
+			os:           "darwin",
 			freeThreaded: false,
-			debug:       false,
-			want:        "cpython-3.13.0+20241016-x86_64-apple-darwin-pgo-full.tar.zst",
+			debug:        false,
+			want:         "cpython-3.13.0+20241016-x86_64-apple-darwin-pgo-full.tar.zst",
 		},
 		{
-			name:        "linux-amd64-freethreaded-debug",
-			arch:        "amd64",
-			os:          "linux",
+			name:         "linux-amd64-freethreaded-debug",
+			arch:         "amd64",
+			os:           "linux",
 			freeThreaded: true,
-			debug:       true,
-			want:        "cpython-3.13.0+20241016-x86_64-unknown-linux-gnu-freethreaded+debug-full.tar.zst",
+			debug:        true,
+			want:         "cpython-3.13.0+20241016-x86_64-unknown-linux-gnu-freethreaded+debug-full.tar.zst",
 		},
 		{
-			name:        "windows-amd64-freethreaded-pgo",
-			arch:        "amd64",
-			os:          "windows",
+			name:         "windows-amd64-freethreaded-pgo",
+			arch:         "amd64",
+			os:           "windows",
 			freeThreaded: true,
-			debug:       false,
-			want:        "cpython-3.13.0+20241016-x86_64-pc-windows-msvc-shared-freethreaded+pgo-full.tar.zst",
+			debug:        false,
+			want:         "cpython-3.13.0+20241016-x86_64-pc-windows-msvc-shared-freethreaded+pgo-full.tar.zst",
 		},
 		{
-			name:        "windows-386-freethreaded-pgo",
-			arch:        "386",
-			os:          "windows",
+			name:         "windows-386-freethreaded-pgo",
+			arch:         "386",
+			os:           "windows",
 			freeThreaded: true,
-			debug:       false,
-			want:        "cpython-3.13.0+20241016-i686-pc-windows-msvc-shared-freethreaded+pgo-full.tar.zst",
+			debug:        false,
+			want:         "cpython-3.13.0+20241016-i686-pc-windows-msvc-shared-freethreaded+pgo-full.tar.zst",
 		},
 		{
-			name:        "unsupported-arch",
-			arch:        "mips",
-			os:          "linux",
+			name:         "unsupported-arch",
+			arch:         "mips",
+			os:           "linux",
 			freeThreaded: false,
-			debug:       false,
-			want:        "",
-			wantErr:     true,
+			debug:        false,
+			want:         "",
+			wantErr:      true,
 		},
 		{
-			name:        "unsupported-os",
-			arch:        "amd64",
-			os:          "freebsd",
+			name:         "unsupported-os",
+			arch:         "amd64",
+			os:           "freebsd",
 			freeThreaded: false,
-			debug:       false,
-			want:        "",
-			wantErr:     true,
+			debug:        false,
+			want:         "",
+			wantErr:      true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := getPythonURL("3.13.0", "20241016", tt.arch, tt.os, tt.freeThreaded, tt.debug)
-			
+
 			if tt.wantErr {
 				if got != "" {
 					t.Errorf("getPythonURL() = %v, want empty string for error case", got)
