@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cpunion/go-python/cmd/internal/python"
+	"github.com/klauspost/compress/zstd"
 )
 
 const (
@@ -237,26 +238,22 @@ func extractTarZst(src, dst string, verbose bool) error {
 		fmt.Printf("Extracting from %s to %s\n", src, dst)
 	}
 
-	// First decompress with zstd
-	tarFile := src + ".tar"
-	cmd := exec.Command("zstd", "-d", src, "-o", tarFile)
-	if verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error decompressing with zstd: %v", err)
-	}
-	defer os.Remove(tarFile)
-
-	// Then extract tar
-	file, err := os.Open(tarFile)
+	// Open the zstd compressed file
+	file, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("error opening file: %v", err)
 	}
 	defer file.Close()
 
-	tr := tar.NewReader(file)
+	// Create zstd decoder
+	decoder, err := zstd.NewReader(file)
+	if err != nil {
+		return fmt.Errorf("error creating zstd decoder: %v", err)
+	}
+	defer decoder.Close()
+
+	// Create tar reader from the decompressed stream
+	tr := tar.NewReader(decoder)
 
 	for {
 		header, err := tr.Next()
@@ -285,7 +282,7 @@ func extractTarZst(src, dst string, verbose bool) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path, 0755); err != nil {
+			if err := os.MkdirAll(path, os.FileMode(header.Mode)); err != nil {
 				return fmt.Errorf("error creating directory %s: %v", path, err)
 			}
 		case tar.TypeReg:
@@ -304,10 +301,40 @@ func extractTarZst(src, dst string, verbose bool) error {
 				return fmt.Errorf("error writing to file %s: %v", path, err)
 			}
 			file.Close()
+		case tar.TypeSymlink:
+			dir := filepath.Dir(path)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("error creating directory %s: %v", dir, err)
+			}
+
+			// Remove existing symlink if it exists
+			if err := os.RemoveAll(path); err != nil {
+				return fmt.Errorf("error removing existing symlink %s: %v", path, err)
+			}
+
+			// Create new symlink
+			if err := os.Symlink(header.Linkname, path); err != nil {
+				return fmt.Errorf("error creating symlink %s -> %s: %v", path, header.Linkname, err)
+			}
+		case tar.TypeLink:
+			dir := filepath.Dir(path)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("error creating directory %s: %v", dir, err)
+			}
+
+			// Remove existing file if it exists
+			if err := os.RemoveAll(path); err != nil {
+				return fmt.Errorf("error removing existing file %s: %v", path, err)
+			}
+
+			// Create hard link relative to the destination directory
+			targetPath := filepath.Join(dst, strings.TrimPrefix(header.Linkname, "python/install/"))
+			if err := os.Link(targetPath, path); err != nil {
+				return fmt.Errorf("error creating hard link %s -> %s: %v", path, targetPath, err)
+			}
 		}
 	}
 
-	// Don't verify pip here anymore
 	return nil
 }
 

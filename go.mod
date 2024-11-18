@@ -1,9 +1,12 @@
 module github.com/cpunion/go-python
 
-go 1.20
+go 1.21
+
+toolchain go1.23.2
 
 require (
 	github.com/fatih/color v1.18.0
+	github.com/klauspost/compress v1.17.11
 	github.com/spf13/cobra v1.8.1
 	go.uber.org/zap v1.27.0
 )
