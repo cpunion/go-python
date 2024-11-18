@@ -16,6 +16,8 @@ const (
 	// Msys2Dir is the directory name for MSYS2 installation
 	Msys2Dir  = "msys2"
 	Msys2Root = Msys2Dir + "/msys64"
+
+	TinyPkgConfigDir = "tiny-pkg-config"
 )
 
 // GetPythonRoot returns the Python installation root path relative to project path
@@ -66,6 +68,10 @@ func GetMsys2Root(projectPath string) string {
 	return filepath.Join(projectPath, DepsDir, Msys2Root)
 }
 
+func GetTinyPkgConfigDir(projectPath string) string {
+	return filepath.Join(projectPath, DepsDir, TinyPkgConfigDir)
+}
+
 func SetEnv(projectPath string) {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
@@ -75,6 +81,7 @@ func SetEnv(projectPath string) {
 	path = GetGoBinDir(absPath) + pathSeparator() + path
 	if runtime.GOOS == "windows" {
 		path = GetMsys2Root(absPath) + pathSeparator() + path
+		path = GetTinyPkgConfigDir(absPath) + pathSeparator() + path
 	}
 	os.Setenv("PATH", path)
 	os.Setenv("GOPATH", GetGoPath(absPath))

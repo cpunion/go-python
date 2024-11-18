@@ -8,7 +8,10 @@ import (
 )
 
 // Dependencies installs all required dependencies for the project
-func Dependencies(projectPath string, goVersion, pyVersion, pyBuildDate string, freeThreaded, debug bool, verbose bool) error {
+func Dependencies(projectPath string, goVersion, tinyPkgConfigVersion, pyVersion, pyBuildDate string, freeThreaded, debug bool, verbose bool) error {
+	if err := installTinyPkgConfig(projectPath, tinyPkgConfigVersion, verbose); err != nil {
+		return err
+	}
 	// Only install MSYS2 on Windows
 	if runtime.GOOS == "windows" {
 		if err := installMsys2(projectPath, verbose); err != nil {

@@ -1,10 +1,7 @@
 package install
 
 import (
-	"archive/tar"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/cpunion/go-python/cmd/internal/python"
-	"github.com/klauspost/compress/zstd"
 )
 
 const (
@@ -108,75 +104,6 @@ func getPythonURL(version, buildDate, arch, os string, freeThreaded, debug bool)
 	return fmt.Sprintf(baseURL, buildDate) + "/" + filename
 }
 
-// getCacheDir returns the cache directory for downloaded files
-func getCacheDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get user home directory: %v", err)
-	}
-	cacheDir := filepath.Join(homeDir, ".gopy", "cache")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create cache directory: %v", err)
-	}
-	return cacheDir, nil
-}
-
-// downloadFileWithCache downloads a file from url and returns the path to the cached file
-func downloadFileWithCache(url string) (string, error) {
-	cacheDir, err := getCacheDir()
-	if err != nil {
-		return "", err
-	}
-
-	// Use URL's last path segment as filename
-	urlPath := strings.Split(url, "/")
-	filename := urlPath[len(urlPath)-1]
-	cachedFile := filepath.Join(cacheDir, filename)
-
-	// Check if file exists in cache
-	if _, err := os.Stat(cachedFile); err == nil {
-		fmt.Printf("Using cached file from %s\n", cachedFile)
-		return cachedFile, nil
-	}
-
-	fmt.Printf("Downloading from %s\n", url)
-
-	// Create temporary file
-	tmpFile, err := os.CreateTemp(cacheDir, "download-*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temporary file: %v", err)
-	}
-	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
-	defer tmpFile.Close()
-
-	// Download to temporary file
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("bad status: %s", resp.Status)
-	}
-
-	_, err = io.Copy(tmpFile, resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to write file: %v", err)
-	}
-
-	// Close the file before renaming
-	tmpFile.Close()
-
-	// Rename temporary file to cached file
-	if err := os.Rename(tmpPath, cachedFile); err != nil {
-		return "", fmt.Errorf("failed to move file to cache: %v", err)
-	}
-
-	return cachedFile, nil
-}
-
 // updateMacOSDylibs updates the install names of dylib files on macOS
 func updateMacOSDylibs(pythonDir string, verbose bool) error {
 	if runtime.GOOS != "darwin" {
@@ -229,115 +156,6 @@ func updateMacOSDylibs(pythonDir string, verbose bool) error {
 			}
 		}
 	}
-	return nil
-}
-
-// extractTarZst extracts a tar.zst file to a destination directory
-func extractTarZst(src, dst, trimPrefix string, verbose bool) error {
-	if verbose {
-		fmt.Printf("Extracting from %s to %s\n", src, dst)
-	}
-
-	// Open the zstd compressed file
-	file, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("error opening file: %v", err)
-	}
-	defer file.Close()
-
-	// Create zstd decoder
-	decoder, err := zstd.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("error creating zstd decoder: %v", err)
-	}
-	defer decoder.Close()
-
-	// Create tar reader from the decompressed stream
-	tr := tar.NewReader(decoder)
-
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		name := header.Name
-
-		if trimPrefix != "" {
-			if !strings.HasPrefix(header.Name, trimPrefix) {
-				continue
-			}
-
-			// Remove the trimPrefix prefix
-			name = strings.TrimPrefix(header.Name, trimPrefix)
-			if name == "" {
-				continue
-			}
-		}
-
-		path := filepath.Join(dst, name)
-		if verbose {
-			fmt.Printf("Extracting: %s\n", path)
-		}
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(path, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("error creating directory %s: %v", path, err)
-			}
-		case tar.TypeReg:
-			dir := filepath.Dir(path)
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("error creating directory %s: %v", dir, err)
-			}
-
-			file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-			if err != nil {
-				return fmt.Errorf("error creating file %s: %v", path, err)
-			}
-
-			if _, err := io.Copy(file, tr); err != nil {
-				file.Close()
-				return fmt.Errorf("error writing to file %s: %v", path, err)
-			}
-			file.Close()
-		case tar.TypeSymlink:
-			dir := filepath.Dir(path)
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("error creating directory %s: %v", dir, err)
-			}
-
-			// Remove existing symlink if it exists
-			if err := os.RemoveAll(path); err != nil {
-				return fmt.Errorf("error removing existing symlink %s: %v", path, err)
-			}
-
-			// Create new symlink
-			if err := os.Symlink(header.Linkname, path); err != nil {
-				return fmt.Errorf("error creating symlink %s -> %s: %v", path, header.Linkname, err)
-			}
-		case tar.TypeLink:
-			dir := filepath.Dir(path)
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				return fmt.Errorf("error creating directory %s: %v", dir, err)
-			}
-
-			// Remove existing file if it exists
-			if err := os.RemoveAll(path); err != nil {
-				return fmt.Errorf("error removing existing file %s: %v", path, err)
-			}
-
-			// Create hard link relative to the destination directory
-			targetPath := filepath.Join(dst, strings.TrimPrefix(header.Linkname, "python/install/"))
-			if err := os.Link(targetPath, path); err != nil {
-				return fmt.Errorf("error creating hard link %s -> %s: %v", path, targetPath, err)
-			}
-		}
-	}
-
 	return nil
 }
 
@@ -489,34 +307,14 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 		return fmt.Errorf("error removing existing Python directory: %v", err)
 	}
 
-	// Create .deps directory if it doesn't exist
-	depsDir := filepath.Join(projectPath, DepsDir)
-	if err := os.MkdirAll(depsDir, 0755); err != nil {
-		return fmt.Errorf("error creating deps directory: %v", err)
-	}
-
 	// Get Python URL
 	url := getPythonURL(version, buildDate, runtime.GOARCH, runtime.GOOS, freeThreaded, debug)
 	if url == "" {
 		return fmt.Errorf("unsupported platform")
 	}
 
-	// Download Python
-	archivePath, err := downloadFileWithCache(url)
-	if err != nil {
-		return fmt.Errorf("error downloading Python: %v", err)
-	}
-
-	if err := os.MkdirAll(pythonDir, 0755); err != nil {
-		return fmt.Errorf("error creating python directory: %v", err)
-	}
-
-	if verbose {
-		fmt.Println("Extracting Python...")
-	}
-	// Extract to .python directory
-	if err := extractTarZst(archivePath, pythonDir, "python/install/", verbose); err != nil {
-		return fmt.Errorf("error extracting Python: %v", err)
+	if err := downloadAndExtract("Python", version, url, pythonDir, "python/install", verbose); err != nil {
+		return fmt.Errorf("error downloading and extracting Python: %v", err)
 	}
 
 	// After extraction, update dylib install names on macOS

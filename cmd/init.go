@@ -72,6 +72,7 @@ Example:
 		pyVersion, _ := cmd.Flags().GetString("python-version")
 		pyBuildDate, _ := cmd.Flags().GetString("python-build-date")
 		pyFreeThreaded, _ := cmd.Flags().GetBool("python-free-threaded")
+		tinyPkgConfigVersion, _ := cmd.Flags().GetString("tiny-pkg-config-version")
 
 		// Check if directory exists
 		if _, err := os.Stat(projectPath); err == nil {
@@ -102,7 +103,7 @@ Example:
 
 		// Install dependencies
 		fmt.Printf("\n%s\n", bold("Installing dependencies..."))
-		if err := install.Dependencies(projectPath, goVersion, pyVersion, pyBuildDate, pyFreeThreaded, debug, verbose); err != nil {
+		if err := install.Dependencies(projectPath, goVersion, tinyPkgConfigVersion, pyVersion, pyBuildDate, pyFreeThreaded, debug, verbose); err != nil {
 			fmt.Printf("Error installing dependencies: %v\n", err)
 			return
 		}
@@ -118,6 +119,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().Bool("debug", false, "Install debug version of Python (not available on Windows)")
 	initCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+	initCmd.Flags().String("tiny-pkg-config-version", "v0.1.0", "tiny-pkg-config version to install")
 	initCmd.Flags().String("go-version", "1.23.3", "Go version to install")
 	initCmd.Flags().String("python-version", "3.13.0", "Python version to install")
 	initCmd.Flags().String("python-build-date", "20241016", "Python build date")
