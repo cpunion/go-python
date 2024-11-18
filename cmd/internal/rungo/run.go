@@ -140,25 +140,21 @@ func RunGoCommand(command string, args []string) error {
 
 // ProcessArgsWithLDFlags processes command line arguments to inject Python paths via ldflags
 func ProcessArgsWithLDFlags(args []string, pythonPath, pythonHome string) []string {
-	result := make([]string, 0, len(args)+6) // Reserve space for potential new flags
+	result := make([]string, 0, len(args))
 
-	// Add Python path if provided
-	if pythonPath != "" {
-		result = append(result, "-ldflags", fmt.Sprintf("-X 'github.com/cpunion/go-python.PythonPath=%s'", pythonPath))
+	// Prepare the -X flags we want to add
+	var xFlags []string
+	if pythonHome != "" {
+		xFlags = append(xFlags, fmt.Sprintf("-X 'github.com/cpunion/go-python.PythonHome=%s'", pythonHome))
 	}
 
-	// Add Python home if provided
+	// Prepare rpath flag if needed
+	var rpathFlag string
 	if pythonHome != "" {
-		result = append(result, "-ldflags", fmt.Sprintf("-X 'github.com/cpunion/go-python.PythonHome=%s'", pythonHome))
-		// Add rpath to Python lib directory
 		pythonLibDir := filepath.Join(pythonHome, "lib")
-
-		var rpathFlag string
 		switch runtime.GOOS {
-		case "darwin":
+		case "darwin", "linux":
 			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath,%s'", pythonLibDir)
-		case "linux":
-			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath=%s'", pythonLibDir)
 		case "windows":
 			// Windows doesn't use rpath
 			rpathFlag = ""
@@ -166,14 +162,61 @@ func ProcessArgsWithLDFlags(args []string, pythonPath, pythonHome string) []stri
 			// Use Linux format for other Unix-like systems
 			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath=%s'", pythonLibDir)
 		}
+	}
 
-		if rpathFlag != "" {
-			result = append(result, "-ldflags", rpathFlag)
+	// Find existing -ldflags if any
+	foundLDFlags := false
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-ldflags=") || arg == "-ldflags" {
+			foundLDFlags = true
+			// Copy everything before this arg
+			result = append(result, args[:i]...)
+
+			// Get existing flags
+			var existingFlags string
+			if strings.HasPrefix(arg, "-ldflags=") {
+				existingFlags = strings.TrimPrefix(arg, "-ldflags=")
+			} else if i+1 < len(args) {
+				existingFlags = args[i+1]
+				i++ // Skip the next arg since we've consumed it
+			}
+
+			// Combine all flags
+			var allFlags []string
+			if len(xFlags) > 0 {
+				allFlags = append(allFlags, xFlags...)
+			}
+			if strings.TrimSpace(existingFlags) != "" {
+				allFlags = append(allFlags, existingFlags)
+			}
+			if rpathFlag != "" {
+				allFlags = append(allFlags, rpathFlag)
+			}
+
+			// Add combined ldflags
+			result = append(result, "-ldflags")
+			result = append(result, strings.Join(allFlags, " "))
+
+			// Add remaining args
+			result = append(result, args[i+1:]...)
+			break
 		}
 	}
 
-	// Append original args after our flags
-	result = append(result, args...)
+	// If no existing -ldflags found, add new ones at the beginning if we have any flags to add
+	if !foundLDFlags {
+		if len(xFlags) > 0 || rpathFlag != "" {
+			var allFlags []string
+			allFlags = append(allFlags, xFlags...)
+			if rpathFlag != "" {
+				allFlags = append(allFlags, rpathFlag)
+			}
+			result = append(result, "-ldflags")
+			result = append(result, strings.Join(allFlags, " "))
+		}
+		result = append(result, args...)
+	}
 
 	return result
 }
