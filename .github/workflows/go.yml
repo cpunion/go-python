@@ -56,10 +56,18 @@ jobs:
           go-version: 1.23
 
       - name: Build
-        run: go build -v ./...
+        run: go install -v ./...
 
       - name: Test with coverage
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+      
+      - name: Test gopy
+        run: |
+          gopy init $HOME/foo
+          cd $HOME/foo
+          gopy build -v .
+          gopy run -v .
+          gopy install -v .
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-24.04'
