@@ -1,6 +1,5 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -10,18 +9,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "go-python",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "gopy",
+	Short: "A tool for building Go applications with Python integration",
+	Long: `gopy is a command line tool that helps you build, run and manage Go applications
+that integrate with Python.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+It provides commands to:
+- Initialize Python environment for your Go project
+- Build Go applications with Python environment properly configured
+- Run Go applications with Python runtime support
+- Install Go packages with Python dependencies
+- Add or remove Python packages to/from your project
+
+Use "gopy help [command]" for more information about a command.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -47,5 +49,3 @@ func init() {
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
-

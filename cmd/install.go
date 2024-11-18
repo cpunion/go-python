@@ -15,15 +15,15 @@ import (
 var installCmd = &cobra.Command{
 	Use:   "install [flags] [packages]",
 	Short: "Install Go packages with Python environment configured",
-	Long: `Install compiles and installs Go packages with the Python environment properly configured.
-If package is a directory, it will be used directly. Otherwise, the directory
-containing the package will be determined.
-
-Example:
-  gopy install .
-  gopy install -v ./cmd/myapp
-  gopy install -v -race .`,
-	DisableFlagParsing: true, // Let go install handle all flags
+	Long: func() string {
+		intro := "Install compiles and installs Go packages with the Python environment properly configured.\n\n"
+		help, err := rungo.GetGoCommandHelp("install")
+		if err != nil {
+			return intro + "Failed to get go help: " + err.Error()
+		}
+		return intro + help
+	}(),
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := rungo.RunGoCommand("install", args); err != nil {
 			fmt.Println("Error:", err)

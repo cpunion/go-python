@@ -15,15 +15,15 @@ import (
 var runCmd = &cobra.Command{
 	Use:   "run [flags] [package] [arguments...]",
 	Short: "Run a Go package with Python environment configured",
-	Long: `Run executes a Go package with the Python environment properly configured.
-If package is a directory, it will be used directly. Otherwise, the directory
-containing the package will be determined.
-
-Example:
-  gopy run . arg1 arg2
-  gopy run -race ./cmd/myapp arg1 arg2
-  gopy run -v -race . arg1 arg2`,
-	DisableFlagParsing: true, // Let go run handle all flags
+	Long: func() string {
+		intro := "Run executes a Go package with the Python environment properly configured.\n\n"
+		help, err := rungo.GetGoCommandHelp("run")
+		if err != nil {
+			return intro + "Failed to get go help: " + err.Error()
+		}
+		return intro + help
+	}(),
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := rungo.RunGoCommand("run", args); err != nil {
 			fmt.Println("Error:", err)

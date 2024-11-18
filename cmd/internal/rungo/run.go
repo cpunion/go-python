@@ -1,6 +1,7 @@
 package rungo
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -134,4 +135,24 @@ func ProcessArgsWithLDFlags(args []string, pythonPath, pythonHome string) []stri
 	}
 
 	return result
+}
+
+// GetGoCommandHelp returns the formatted help text for the specified go command
+func GetGoCommandHelp(command string) (string, error) {
+	cmd := exec.Command("go", "help", command)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	intro := fmt.Sprintf(`The command arguments and flags are fully compatible with 'go %s'.
+
+Following is the help message from 'go %s':
+-------------------------------------------------------------------------------
+
+`, command, command)
+
+	return intro + out.String() + "\n-------------------------------------------------------------------------------", nil
 }
