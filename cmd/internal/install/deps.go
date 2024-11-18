@@ -36,7 +36,9 @@ func installGoDeps(projectPath string) error {
 	if err := os.Chdir(projectPath); err != nil {
 		return fmt.Errorf("error changing to project directory: %v", err)
 	}
-	defer os.Chdir(currentDir)
+	defer func() {
+		_ = os.Chdir(currentDir)
+	}()
 
 	fmt.Println("Installing Go dependencies...")
 	getCmd := exec.Command("go", "get", "-u", "github.com/cpunion/go-python")
