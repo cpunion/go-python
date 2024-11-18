@@ -1,11 +1,13 @@
 package create
 
 import (
+	"bufio"
 	"embed"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 )
@@ -18,12 +20,36 @@ var (
 	yellow = color.New(color.FgYellow).SprintFunc()
 )
 
+// promptOverwrite asks user whether to overwrite a file
+func promptOverwrite(path string) (bool, bool) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("%s %s exists. Overwrite (Yes/No/All)? [y/n/a] ", yellow("conflict"), path)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return false, false
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+		switch response {
+		case "y", "yes":
+			return true, false // overwrite this file only
+		case "n", "no":
+			return false, false // skip this file
+		case "a", "all":
+			return true, true // overwrite all files
+		}
+	}
+}
+
 // Project initializes a new go-python project in the specified directory
 func Project(projectPath string, verbose bool) error {
 	// Create project directory
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		return fmt.Errorf("error creating directory: %v", err)
 	}
+
+	overwriteAll := false
 
 	// Walk through template files and copy them
 	err := fs.WalkDir(templates, "templates", func(path string, d fs.DirEntry, err error) error {
@@ -58,6 +84,15 @@ func Project(projectPath string, verbose bool) error {
 		_, err = os.Stat(dstPath)
 		fileExists := err == nil
 
+		if fileExists && !overwriteAll {
+			overwrite, all := promptOverwrite(relPath)
+			if !overwrite {
+				fmt.Printf("%s\t%s\n", yellow("skip"), relPath)
+				return nil
+			}
+			overwriteAll = all
+		}
+
 		// Read template file
 		content, err := templates.ReadFile(path)
 		if err != nil {
@@ -88,6 +123,13 @@ func Project(projectPath string, verbose bool) error {
 	goModExists := false
 	if _, err := os.Stat(goModPath); err == nil {
 		goModExists = true
+		if !overwriteAll {
+			overwrite, _ := promptOverwrite("go.mod")
+			if !overwrite {
+				fmt.Printf("%s\tgo.mod\n", yellow("skip"))
+				return nil
+			}
+		}
 	}
 
 	goModContent := fmt.Sprintf(`module %s
