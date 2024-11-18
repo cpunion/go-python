@@ -26,7 +26,7 @@ var runCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := rungo.RunGoCommand("run", args); err != nil {
-			fmt.Println("Error:", err)
+			fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 			os.Exit(1)
 		}
 	},

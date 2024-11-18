@@ -7,14 +7,19 @@ import (
 )
 
 // Dependencies installs all required dependencies for the project
-func Dependencies(projectPath string, version, buildDate string, freeThreaded, debug bool, verbose bool) error {
+func Dependencies(projectPath string, goVersion, pyVersion, pyBuildDate string, freeThreaded, debug bool, verbose bool) error {
+	if err := installGo(projectPath, goVersion, verbose); err != nil {
+		return err
+	}
+	SetEnv(projectPath)
+
 	// Install Go dependencies
 	if err := installGoDeps(projectPath); err != nil {
 		return err
 	}
 
 	// Install Python environment and dependencies
-	if err := installPythonEnv(projectPath, version, buildDate, freeThreaded, debug, verbose); err != nil {
+	if err := installPythonEnv(projectPath, pyVersion, pyBuildDate, freeThreaded, debug, verbose); err != nil {
 		return err
 	}
 

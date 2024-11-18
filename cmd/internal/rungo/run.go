@@ -74,7 +74,8 @@ func RunGoCommand(command string, args []string) error {
 	// Find the package argument
 	pkgIndex := FindPackageIndex(args)
 
-	listArgs := []string{"list", "-json"}
+	// TODO: don't depend on external go command
+	listArgs := []string{"list", "-find", "-json"}
 
 	if pkgIndex != -1 {
 		pkgPath := args[pkgIndex]
@@ -92,6 +93,7 @@ func RunGoCommand(command string, args []string) error {
 		return fmt.Errorf("failed to parse module info: %v", err)
 	}
 	projectRoot := listInfo.Root
+	install.SetEnv(projectRoot)
 
 	// Set up environment variables
 	env := os.Environ()

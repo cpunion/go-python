@@ -478,6 +478,7 @@ func LoadEnvFile(dir string) ([]string, error) {
 
 // installPythonEnv downloads and installs Python standalone build
 func installPythonEnv(projectPath string, version, buildDate string, freeThreaded, debug bool, verbose bool) error {
+	fmt.Printf("Installing Python %s in %s\n", version, projectPath)
 	pythonDir := GetPythonRoot(projectPath)
 
 	// Remove existing Python directory if it exists
