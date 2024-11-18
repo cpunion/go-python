@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	baseURL       = "https://github.com/indygreg/python-build-standalone/releases/download/%s"
+	baseURL = "https://github.com/indygreg/python-build-standalone/releases/download/%s"
 )
 
 type pythonBuild struct {
@@ -53,13 +53,13 @@ func getPythonURL(version, buildDate, arch, os string, freeThreaded, debug bool)
 		build.os = "apple-darwin"
 		if freeThreaded {
 			build.variant = "freethreaded"
-			if debug {
+			if build.debug {
 				build.variant += "+debug"
 			} else {
 				build.variant += "+pgo"
 			}
 		} else {
-			if debug {
+			if build.debug {
 				build.variant = "debug"
 			} else {
 				build.variant = "pgo"
@@ -69,13 +69,13 @@ func getPythonURL(version, buildDate, arch, os string, freeThreaded, debug bool)
 		build.os = "unknown-linux-gnu"
 		if freeThreaded {
 			build.variant = "freethreaded"
-			if debug {
+			if build.debug {
 				build.variant += "+debug"
 			} else {
 				build.variant += "+pgo"
 			}
 		} else {
-			if debug {
+			if build.debug {
 				build.variant = "debug"
 			} else {
 				build.variant = "pgo"
@@ -176,33 +176,59 @@ func downloadFileWithCache(url string) (string, error) {
 	return cachedFile, nil
 }
 
-// findPipExecutable finds the correct pip executable in the bin directory
-func findPipExecutable(binDir string) (string, error) {
-	if runtime.GOOS == "windows" {
-		// Check for pip3.exe
-		pipPath := filepath.Join(binDir, "Scripts", "pip3.exe")
-		if _, err := os.Stat(pipPath); err == nil {
-			return pipPath, nil
-		}
-		// Check for pip.exe
-		pipPath = filepath.Join(binDir, "Scripts", "pip.exe")
-		if _, err := os.Stat(pipPath); err == nil {
-			return pipPath, nil
-		}
-	} else {
-		// Try different pip names
-		pipNames := []string{"pip3", "pip"}
-		for _, name := range pipNames {
-			pipPath := filepath.Join(binDir, "bin", name)
-			if info, err := os.Stat(pipPath); err == nil {
-				// Check if the file is executable
-				if info.Mode()&0111 != 0 {
-					return pipPath, nil
-				}
+// updateMacOSDylibs updates the install names of dylib files on macOS
+func updateMacOSDylibs(pythonDir string, verbose bool) error {
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+
+	libDir := filepath.Join(pythonDir, "lib")
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		return fmt.Errorf("failed to read lib directory: %v", err)
+	}
+
+	absLibDir, err := filepath.Abs(libDir)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %v", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".dylib") {
+			dylibPath := filepath.Join(libDir, entry.Name())
+			if verbose {
+				fmt.Printf("Updating install name for: %s\n", dylibPath)
+			}
+
+			// Get the current install name
+			cmd := exec.Command("otool", "-D", dylibPath)
+			output, err := cmd.Output()
+			if err != nil {
+				return fmt.Errorf("failed to get install name for %s: %v", dylibPath, err)
+			}
+
+			// Parse the output to get the current install name
+			lines := strings.Split(string(output), "\n")
+			if len(lines) < 2 {
+				continue
+			}
+			currentName := strings.TrimSpace(lines[1])
+			if currentName == "" {
+				continue
+			}
+
+			// Calculate new install name using absolute path
+			newName := filepath.Join(absLibDir, filepath.Base(currentName))
+
+			fmt.Printf("Updating install name for %s to %s\n", dylibPath, newName)
+			// Update the install name
+			cmd = exec.Command("install_name_tool", "-id", newName, dylibPath)
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to update install name for %s: %v", dylibPath, err)
 			}
 		}
 	}
-	return "", fmt.Errorf("pip executable not found in %s", binDir)
+	return nil
 }
 
 // extractTarZst extracts a tar.zst file to a destination directory
@@ -374,6 +400,55 @@ func updatePkgConfig(projectPath string) error {
 	return nil
 }
 
+// writeEnvFile writes environment variables to .python/env.txt
+func writeEnvFile(projectPath string) error {
+	pythonDir := filepath.Join(projectPath, ".python")
+	absPath, err := filepath.Abs(pythonDir)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %v", err)
+	}
+
+	// Get Python path using python executable
+	env := python.New(projectPath)
+	pythonBin, err := env.Python()
+	if err != nil {
+		return fmt.Errorf("failed to get Python executable: %v", err)
+	}
+
+	// Execute Python to get sys.path
+	cmd := exec.Command(pythonBin, "-c", "import sys; print(':'.join(sys.path))")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get Python path: %v", err)
+	}
+
+	// Prepare environment variables
+	envVars := []string{
+		fmt.Sprintf("PKG_CONFIG_PATH=%s", filepath.Join(absPath, "lib", "pkgconfig")),
+		fmt.Sprintf("PYTHONPATH=%s", strings.TrimSpace(string(output))),
+		fmt.Sprintf("PYTHONHOME=%s", absPath),
+	}
+
+	// Write to env.txt
+	envFile := filepath.Join(pythonDir, "env.txt")
+	if err := os.WriteFile(envFile, []byte(strings.Join(envVars, "\n")), 0644); err != nil {
+		return fmt.Errorf("failed to write env file: %v", err)
+	}
+
+	return nil
+}
+
+// LoadEnvFile loads environment variables from .python/env.txt in the given directory
+func LoadEnvFile(dir string) ([]string, error) {
+	envFile := filepath.Join(dir, ".python", "env.txt")
+	content, err := os.ReadFile(envFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read env file: %v", err)
+	}
+
+	return strings.Split(strings.TrimSpace(string(content)), "\n"), nil
+}
+
 // installPythonEnv downloads and installs Python standalone build
 func installPythonEnv(projectPath string, version, buildDate string, freeThreaded, debug bool, verbose bool) error {
 	pythonDir := filepath.Join(projectPath, ".python")
@@ -407,6 +482,11 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 		return fmt.Errorf("error extracting Python: %v", err)
 	}
 
+	// After extraction, update dylib install names on macOS
+	if err := updateMacOSDylibs(pythonDir, verbose); err != nil {
+		return fmt.Errorf("error updating dylib install names: %v", err)
+	}
+
 	// Create Python environment
 	env := python.New(projectPath)
 
@@ -433,6 +513,11 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 
 	if err := updatePkgConfig(projectPath); err != nil {
 		return fmt.Errorf("error updating pkg-config: %v", err)
+	}
+
+	// Write environment variables to env.txt
+	if err := writeEnvFile(projectPath); err != nil {
+		return fmt.Errorf("error writing environment file: %v", err)
 	}
 
 	return nil

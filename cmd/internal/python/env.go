@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 )
 
@@ -22,25 +23,26 @@ func New(projectPath string) *Env {
 
 // Python returns the path to the Python executable
 func (e *Env) Python() (string, error) {
+	binDir := filepath.Join(e.Root, "bin")
+	entries, err := os.ReadDir(binDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read bin directory: %v", err)
+	}
+
+	// Single pattern to match all variants, prioritizing 't' versions
+	var pattern *regexp.Regexp
 	if runtime.GOOS == "windows" {
-		pythonPath := filepath.Join(e.Root, "bin", "python3.exe")
-		if _, err := os.Stat(pythonPath); err == nil {
-			return pythonPath, nil
-		}
-		pythonPath = filepath.Join(e.Root, "bin", "python.exe")
-		if _, err := os.Stat(pythonPath); err == nil {
-			return pythonPath, nil
-		}
+		pattern = regexp.MustCompile(`^python3?[\d.]*t?(?:\.exe)?$`)
 	} else {
-		pythonPath := filepath.Join(e.Root, "bin", "python3")
-		if _, err := os.Stat(pythonPath); err == nil {
-			return pythonPath, nil
-		}
-		pythonPath = filepath.Join(e.Root, "bin", "python")
-		if _, err := os.Stat(pythonPath); err == nil {
-			return pythonPath, nil
+		pattern = regexp.MustCompile(`^python3?[\d.]*t?$`)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && pattern.MatchString(entry.Name()) {
+			return filepath.Join(binDir, entry.Name()), nil
 		}
 	}
+
 	return "", fmt.Errorf("python executable not found in %s", e.Root)
 }
 
