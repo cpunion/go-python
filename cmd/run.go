@@ -71,17 +71,6 @@ Example:
 			dir = absPath
 		}
 
-		// Convert the package path to be relative to the working directory
-		relPath := "."
-		if !fi.IsDir() {
-			relPath = "./" + filepath.Base(absPath)
-		}
-
-		// Create new args slice with the package path replaced
-		newArgs := make([]string, len(args))
-		copy(newArgs, args)
-		newArgs[pkgIndex] = relPath
-
 		// Set up environment variables
 		env := os.Environ()
 
@@ -93,9 +82,8 @@ Example:
 		}
 
 		// Prepare go run command with all arguments
-		goArgs := append([]string{"run"}, newArgs...)
+		goArgs := append([]string{"run"}, args...)
 		run := exec.Command("go", goArgs...)
-		run.Dir = dir
 		run.Env = env
 		run.Stdout = os.Stdout
 		run.Stderr = os.Stderr
