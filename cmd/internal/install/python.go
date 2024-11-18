@@ -340,13 +340,13 @@ func extractTarZst(src, dst string, verbose bool) error {
 
 // updatePkgConfig updates the prefix in pkg-config files to use absolute path
 func updatePkgConfig(projectPath string) error {
-	pkgConfigDir := filepath.Join(projectPath, ".python/lib/pkgconfig")
+	pkgConfigDir := GetPythonPkgConfigDir(projectPath)
 	entries, err := os.ReadDir(pkgConfigDir)
 	if err != nil {
 		return fmt.Errorf("failed to read pkgconfig directory: %v", err)
 	}
 
-	pythonPath := filepath.Join(projectPath, ".python")
+	pythonPath := GetPythonRoot(projectPath)
 	absPath, err := filepath.Abs(pythonPath)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %v", err)
@@ -429,14 +429,14 @@ func updatePkgConfig(projectPath string) error {
 
 // writeEnvFile writes environment variables to .python/env.txt
 func writeEnvFile(projectPath string) error {
-	pythonDir := filepath.Join(projectPath, ".python")
+	pythonDir := GetPythonRoot(projectPath)
 	absPath, err := filepath.Abs(pythonDir)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %v", err)
 	}
 
 	// Get Python path using python executable
-	env := python.New(projectPath)
+	env := python.New(absPath)
 	pythonBin, err := env.Python()
 	if err != nil {
 		return fmt.Errorf("failed to get Python executable: %v", err)
@@ -467,7 +467,7 @@ func writeEnvFile(projectPath string) error {
 
 // LoadEnvFile loads environment variables from .python/env.txt in the given directory
 func LoadEnvFile(dir string) ([]string, error) {
-	envFile := filepath.Join(dir, ".python", "env.txt")
+	envFile := filepath.Join(GetPythonRoot(dir), "env.txt")
 	content, err := os.ReadFile(envFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read env file: %v", err)
@@ -478,11 +478,17 @@ func LoadEnvFile(dir string) ([]string, error) {
 
 // installPythonEnv downloads and installs Python standalone build
 func installPythonEnv(projectPath string, version, buildDate string, freeThreaded, debug bool, verbose bool) error {
-	pythonDir := filepath.Join(projectPath, ".python")
+	pythonDir := GetPythonRoot(projectPath)
 
 	// Remove existing Python directory if it exists
 	if err := os.RemoveAll(pythonDir); err != nil {
 		return fmt.Errorf("error removing existing Python directory: %v", err)
+	}
+
+	// Create .deps directory if it doesn't exist
+	depsDir := filepath.Join(projectPath, DepsDir)
+	if err := os.MkdirAll(depsDir, 0755); err != nil {
+		return fmt.Errorf("error creating deps directory: %v", err)
 	}
 
 	// Get Python URL
@@ -515,7 +521,7 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 	}
 
 	// Create Python environment
-	env := python.New(projectPath)
+	env := python.New(pythonDir)
 
 	// Make sure pip is executable
 	pipPath, err := env.Pip()

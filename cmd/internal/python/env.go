@@ -15,9 +15,9 @@ type Env struct {
 }
 
 // New creates a new Python environment instance
-func New(projectPath string) *Env {
+func New(pythonHome string) *Env {
 	return &Env{
-		Root: filepath.Join(projectPath, ".python"),
+		Root: pythonHome,
 	}
 }
 

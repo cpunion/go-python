@@ -165,7 +165,7 @@ func TestLoadEnvFile(t *testing.T) {
 	t.Run("valid env file", func(t *testing.T) {
 		// Create temporary directory structure
 		tmpDir := t.TempDir()
-		pythonDir := filepath.Join(tmpDir, ".python")
+		pythonDir := GetPythonRoot(tmpDir)
 		if err := os.MkdirAll(pythonDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -206,7 +206,7 @@ func TestUpdatePkgConfig(t *testing.T) {
 	t.Run("valid pkg-config files", func(t *testing.T) {
 		// Create temporary directory structure
 		tmpDir := t.TempDir()
-		pkgConfigDir := filepath.Join(tmpDir, ".python", "lib", "pkgconfig")
+		pkgConfigDir := GetPythonPkgConfigDir(tmpDir)
 		if err := os.MkdirAll(pkgConfigDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -252,7 +252,7 @@ func TestUpdatePkgConfig(t *testing.T) {
 				continue
 			}
 
-			absPath, _ := filepath.Abs(filepath.Join(tmpDir, ".python"))
+			absPath, _ := filepath.Abs(filepath.Join(tmpDir, ".deps/python"))
 			expectedPrefix := fmt.Sprintf("prefix=%s", absPath)
 			if !strings.Contains(string(content), expectedPrefix) {
 				t.Errorf("File %s does not contain expected prefix %s", filename, expectedPrefix)
@@ -277,11 +277,8 @@ func TestWriteEnvFile(t *testing.T) {
 	t.Run("write env file", func(t *testing.T) {
 		// Create temporary directory structure
 		tmpDir := t.TempDir()
-		pythonDir := filepath.Join(tmpDir, ".python")
-		binDir := filepath.Join(pythonDir, "bin")
-		if runtime.GOOS == "windows" {
-			binDir = filepath.Join(pythonDir, "Scripts")
-		}
+		pythonDir := GetPythonRoot(tmpDir)
+		binDir := GetPythonBinDir(tmpDir)
 		if err := os.MkdirAll(binDir, 0755); err != nil {
 			t.Fatal(err)
 		}
@@ -349,7 +346,7 @@ echo "/mock/path1:/mock/path2"
 
 	t.Run("missing python executable", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(tmpDir, ".python"), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(tmpDir, ".deps/python"), 0755); err != nil {
 			t.Fatal(err)
 		}
 
