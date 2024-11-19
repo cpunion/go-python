@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,6 +29,17 @@ func getCacheDir() (string, error) {
 	return cacheDir, nil
 }
 
+// getFullExtension returns the full extension for a filename (e.g., ".tar.gz" for "file.tar.gz")
+func getFullExtension(filename string) string {
+	// Handle common multi-level extensions
+	for _, ext := range []string{".tar.gz", ".tar.zst"} {
+		if strings.HasSuffix(filename, ext) {
+			return ext
+		}
+	}
+	return filepath.Ext(filename)
+}
+
 // downloadFileWithCache downloads a file from url and returns the path to the cached file
 func downloadFileWithCache(url string) (string, error) {
 	cacheDir, err := getCacheDir()
@@ -37,7 +50,17 @@ func downloadFileWithCache(url string) (string, error) {
 	// Use URL's last path segment as filename
 	urlPath := strings.Split(url, "/")
 	filename := urlPath[len(urlPath)-1]
-	cachedFile := filepath.Join(cacheDir, filename)
+
+	// Calculate SHA1 hash of the URL
+	hasher := sha1.New()
+	hasher.Write([]byte(url))
+	urlHash := hex.EncodeToString(hasher.Sum(nil))[:8] // Use first 8 characters of hash
+
+	// Insert hash before the file extension, handling multi-level extensions
+	ext := getFullExtension(filename)
+	baseFilename := filename[:len(filename)-len(ext)]
+	cachedFilename := fmt.Sprintf("%s-%s%s", baseFilename, urlHash, ext)
+	cachedFile := filepath.Join(cacheDir, cachedFilename)
 
 	// Check if file exists in cache
 	if _, err := os.Stat(cachedFile); err == nil {
