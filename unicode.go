@@ -16,12 +16,12 @@ func newStr(obj *cPyObject) Str {
 
 func MakeStr(s string) Str {
 	ptr := (*Char)(unsafe.Pointer(unsafe.StringData(s)))
-	length := C.long(len(s))
+	length := C.Py_ssize_t(len(s))
 	return newStr(C.PyUnicode_FromStringAndSize(ptr, length))
 }
 
 func (s Str) String() string {
-	var l C.long
+	var l C.Py_ssize_t
 	buf := C.PyUnicode_AsUTF8AndSize(s.obj, &l)
 	return GoStringN((*Char)(buf), int(l))
 }
@@ -31,7 +31,7 @@ func (s Str) Len() int {
 }
 
 func (s Str) ByteLen() int {
-	var l C.long
+	var l C.Py_ssize_t
 	_ = C.PyUnicode_AsUTF8AndSize(s.obj, &l)
 	return int(l)
 }

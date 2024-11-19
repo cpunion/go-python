@@ -101,7 +101,7 @@ func (d Dict) Items() func(func(Object, Object) bool) {
 	C.pyCriticalSection_Begin(&cs, obj)
 	return func(fn func(Object, Object) bool) {
 		defer C.pyCriticalSection_End(&cs)
-		var pos C.long
+		var pos C.Py_ssize_t
 		var key, value *C.PyObject
 		for C.PyDict_Next(obj, &pos, &key, &value) == 1 {
 			if !fn(newObject(key), newObject(value)) {
