@@ -159,15 +159,92 @@ func updateMacOSDylibs(pythonDir string, verbose bool) error {
 	return nil
 }
 
+// generatePkgConfig generates pkg-config files for Windows
+func generatePkgConfig(pythonPath, pkgConfigDir string) error {
+	if err := os.MkdirAll(pkgConfigDir, 0755); err != nil {
+		return fmt.Errorf("failed to create pkgconfig directory: %v", err)
+	}
+
+	// Get Python version from the environment
+	env := python.New(pythonPath)
+	pythonBin, err := env.Python()
+	if err != nil {
+		return fmt.Errorf("failed to get Python executable: %v", err)
+	}
+
+	// Get Python version
+	cmd := exec.Command(pythonBin, "-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to get Python version: %v", err)
+	}
+	version := strings.TrimSpace(string(output))
+
+	// Template for the pkg-config file
+	pcTemplate := `prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: Python
+Description: Embed Python into an application
+Requires:
+Version: %s
+Libs.private: 
+Libs: -L${libdir} -lpython%s
+Cflags: -I${includedir}/python%s
+`
+
+	// Create the main pkg-config files
+	files := []struct {
+		name    string
+		content string
+	}{
+		{
+			fmt.Sprintf("python-%s.pc", version),
+			fmt.Sprintf(pcTemplate, version, version, version),
+		},
+		{
+			fmt.Sprintf("python-%s-embed.pc", version),
+			fmt.Sprintf(pcTemplate, version, version, version),
+		},
+		{
+			"python3.pc",
+			fmt.Sprintf(pcTemplate, version, version, version),
+		},
+		{
+			"python3-embed.pc",
+			fmt.Sprintf(pcTemplate, version, version, version),
+		},
+	}
+
+	// Write all pkg-config files
+	for _, file := range files {
+		pcPath := filepath.Join(pkgConfigDir, file.name)
+		if err := os.WriteFile(pcPath, []byte(file.content), 0644); err != nil {
+			return fmt.Errorf("failed to write %s: %v", file.name, err)
+		}
+	}
+
+	return nil
+}
+
 // updatePkgConfig updates the prefix in pkg-config files to use absolute path
 func updatePkgConfig(projectPath string) error {
+	pythonPath := GetPythonRoot(projectPath)
 	pkgConfigDir := GetPythonPkgConfigDir(projectPath)
+
+	if runtime.GOOS == "windows" {
+		if err := generatePkgConfig(pythonPath, pkgConfigDir); err != nil {
+			return err
+		}
+	}
+
 	entries, err := os.ReadDir(pkgConfigDir)
 	if err != nil {
 		return fmt.Errorf("failed to read pkgconfig directory: %v", err)
 	}
 
-	pythonPath := GetPythonRoot(projectPath)
 	absPath, err := filepath.Abs(pythonPath)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %v", err)
