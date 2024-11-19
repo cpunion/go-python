@@ -119,7 +119,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().Bool("debug", false, "Install debug version of Python (not available on Windows)")
 	initCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
-	initCmd.Flags().String("tiny-pkg-config-version", "v0.1.0", "tiny-pkg-config version to install")
+	initCmd.Flags().String("tiny-pkg-config-version", "v0.2.0", "tiny-pkg-config version to install")
 	initCmd.Flags().String("go-version", "1.23.3", "Go version to install")
 	initCmd.Flags().String("python-version", "3.13.0", "Python version to install")
 	initCmd.Flags().String("python-build-date", "20241016", "Python build date")
