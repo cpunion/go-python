@@ -14,7 +14,7 @@ func Dependencies(projectPath string, goVersion, tinyPkgConfigVersion, pyVersion
 	}
 	// Only install MSYS2 on Windows
 	if runtime.GOOS == "windows" {
-		if err := installMsys2(projectPath, verbose); err != nil {
+		if err := installMingw(projectPath, verbose); err != nil {
 			return err
 		}
 	}
