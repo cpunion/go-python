@@ -183,7 +183,7 @@ func generatePkgConfig(pythonPath, pkgConfigDir string) error {
 	// Template for the pkg-config file
 	pcTemplate := `prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
+libdir=${exec_prefix}
 includedir=${prefix}/include
 
 Name: Python
@@ -191,9 +191,10 @@ Description: Embed Python into an application
 Requires:
 Version: %s
 Libs.private: 
-Libs: -L${libdir} -lpython%s
-Cflags: -I${includedir}/python%s
+Libs: -L${libdir} -lpython313
+Cflags: -I${includedir}
 `
+	// TODO: need update libs
 
 	// Create the main pkg-config files
 	files := []struct {
@@ -202,19 +203,19 @@ Cflags: -I${includedir}/python%s
 	}{
 		{
 			fmt.Sprintf("python-%s.pc", version),
-			fmt.Sprintf(pcTemplate, version, version, version),
+			fmt.Sprintf(pcTemplate, version),
 		},
 		{
 			fmt.Sprintf("python-%s-embed.pc", version),
-			fmt.Sprintf(pcTemplate, version, version, version),
+			fmt.Sprintf(pcTemplate, version),
 		},
 		{
 			"python3.pc",
-			fmt.Sprintf(pcTemplate, version, version, version),
+			fmt.Sprintf(pcTemplate, version),
 		},
 		{
 			"python3-embed.pc",
-			fmt.Sprintf(pcTemplate, version, version, version),
+			fmt.Sprintf(pcTemplate, version),
 		},
 	}
 
