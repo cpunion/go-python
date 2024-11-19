@@ -46,20 +46,20 @@ jobs:
         sys:
           - {os: macos-latest, shell: bash}
           - {os: ubuntu-24.04, shell: bash}
-          - {os: windows-latest, shell: 'msys2 {0}'}
+          - {os: windows-latest, shell: bash}
     defaults:
       run:
         shell: ${{ matrix.sys.shell }}
     runs-on: ${{matrix.sys.os}}
     steps:
-      - uses: msys2/setup-msys2@v2
-        if: matrix.sys.os == 'windows-latest'
-        with:
-          update: true
-          install: >-
-            curl
-            git
-            pkg-config
+      # - uses: msys2/setup-msys2@v2
+      #   if: matrix.sys.os == 'windows-latest'
+      #   with:
+      #     update: true
+      #     install: >-
+      #       curl
+      #       git
+      #       pkg-config
 
       - uses: actions/checkout@v4
 
@@ -73,16 +73,23 @@ jobs:
           python-version: '3.13'
           update-environment: true
       
-      - name: Test PKG_CONFIG_PATH
+      - name: Generate Python pkg-config for windows (patch)
         if: matrix.sys.os == 'windows-latest'
         run: |
-          echo on
-          dir /c/hostedtoolcache/windows/Python/3.13.0/x64/
-          dir /c/hostedtoolcache/windows/Python/3.13.0/x64/lib
-          dir /c/hostedtoolcache/windows/Python/3.13.0/x64/lib/pkgconfig
+          mkdir -p $PKG_CONFIG_PATH
+          cp .github/assets/python3-embed.pc $PKG_CONFIG_PATH/
+      
+      - name: Install tiny-pkg-config for windows (patch)
+        if: matrix.sys.os == 'windows-latest'
+        run: |
+          set -x
+          curl -L https://github.com/cpunion/tiny-pkg-config/releases/download/v0.2.0/tiny-pkg-config_Windows_x86_64.zip -o /tmp/tiny-pkg-config.zip
+          unzip /tmp/tiny-pkg-config.zip -d $HOME/bin
+          mv $HOME/bin/tiny-pkg-config.exe $HOME/bin/pkg-config.exe
           echo $PKG_CONFIG_PATH
-          pkg-config --libs python-3.13-embed
+          cat $PKG_CONFIG_PATH/python3-embed.pc
           pkg-config --libs python3-embed
+          pkg-config --cflags python3-embed
 
       - name: Build
         run: go install -v ./...
@@ -99,7 +106,6 @@ jobs:
           gopy install -v .
 
       - name: Upload coverage to Codecov
-        if: matrix.sys.os == 'ubuntu-24.04'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
