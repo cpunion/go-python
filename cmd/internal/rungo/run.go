@@ -139,36 +139,23 @@ func ProcessArgsWithLDFlags(args []string, projectRoot, pythonPath, pythonHome s
 	result := make([]string, 0, len(args))
 
 	// Prepare the -X flags we want to add
-	var xFlags []string
-	if pythonHome != "" {
-		xFlags = append(xFlags, fmt.Sprintf("-X 'github.com/cpunion/go-python.ProjectRoot=%s'", projectRoot))
-	}
+	ldflags := fmt.Sprintf("-X 'github.com/cpunion/go-python.ProjectRoot=%s'", projectRoot)
 
 	// Prepare rpath flag if needed
-	var rpathFlag string
-	if pythonHome != "" {
-		pythonLibDir := filepath.Join(pythonHome, "lib")
-		switch runtime.GOOS {
-		case "darwin", "linux":
-			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath,%s'", pythonLibDir)
-		case "windows":
-			// Windows doesn't use rpath
-			rpathFlag = ""
-		default:
-			// Use Linux format for other Unix-like systems
-			rpathFlag = fmt.Sprintf("-extldflags '-Wl,-rpath=%s'", pythonLibDir)
-		}
+	pythonLibDir := env.GetPythonLibDir(projectRoot)
+	switch runtime.GOOS {
+	case "darwin", "linux":
+		ldflags += fmt.Sprintf(" -extldflags '-Wl,-rpath,%s'", pythonLibDir)
+	case "windows":
+		// Windows doesn't use rpath
+	default:
+		// Use Linux format for other Unix-like systems
+		ldflags += fmt.Sprintf(" -extldflags '-Wl,-rpath=%s'", pythonLibDir)
 	}
 
-	// Find existing -ldflags if any
-	foundLDFlags := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if strings.HasPrefix(arg, "-ldflags=") || arg == "-ldflags" {
-			foundLDFlags = true
-			// Copy everything before this arg
-			result = append(result, args[:i]...)
-
 			// Get existing flags
 			var existingFlags string
 			if strings.HasPrefix(arg, "-ldflags=") {
@@ -177,44 +164,15 @@ func ProcessArgsWithLDFlags(args []string, projectRoot, pythonPath, pythonHome s
 				existingFlags = args[i+1]
 				i++ // Skip the next arg since we've consumed it
 			}
-
-			// Combine all flags
-			var allFlags []string
-			if len(xFlags) > 0 {
-				allFlags = append(allFlags, xFlags...)
+			existingFlags = strings.TrimSpace(existingFlags)
+			if ldflags != "" {
+				ldflags += " " + existingFlags
 			}
-			if strings.TrimSpace(existingFlags) != "" {
-				allFlags = append(allFlags, existingFlags)
-			}
-			if rpathFlag != "" {
-				allFlags = append(allFlags, rpathFlag)
-			}
-
-			// Add combined ldflags
-			result = append(result, "-ldflags")
-			result = append(result, strings.Join(allFlags, " "))
-
-			// Add remaining args
-			result = append(result, args[i+1:]...)
-			break
+		} else {
+			result = append(result, arg)
 		}
 	}
-
-	// If no existing -ldflags found, add new ones at the beginning if we have any flags to add
-	if !foundLDFlags {
-		if len(xFlags) > 0 || rpathFlag != "" {
-			var allFlags []string
-			allFlags = append(allFlags, xFlags...)
-			if rpathFlag != "" {
-				allFlags = append(allFlags, rpathFlag)
-			}
-			result = append(result, "-ldflags")
-			result = append(result, strings.Join(allFlags, " "))
-		}
-		result = append(result, args...)
-	}
-
-	return result
+	return append([]string{"-ldflags", ldflags}, result...)
 }
 
 // GetGoCommandHelp returns the formatted help text for the specified go command

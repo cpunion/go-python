@@ -133,7 +133,7 @@ func ReadEnvFile(projectDir string) (map[string]string, error) {
 	envFile := GetEnvConfigPath(projectDir)
 	content, err := os.ReadFile(envFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read env file: %v", err)
+		return nil, fmt.Errorf("failed to read env file %s: %v", envFile, err)
 	}
 	envs := map[string]string{}
 	for _, line := range strings.Split(strings.TrimSpace(string(content)), "\n") {
