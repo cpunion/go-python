@@ -2,11 +2,13 @@ package env
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 // PythonEnv represents a Python environment
@@ -51,18 +53,35 @@ func (e *PythonEnv) Python() (string, error) {
 
 // RunPip executes pip with the given arguments
 func (e *PythonEnv) RunPip(args ...string) error {
-	return e.RunPython(append([]string{"-m", "pip"}, args...)...)
+	return e.RunPythonWithOutput(nil, append([]string{"-m", "pip"}, args...)...)
 }
 
 // RunPython executes python with the given arguments
-func (e *PythonEnv) RunPython(args ...string) error {
+func (e *PythonEnv) RunPython(args ...string) (string, error) {
+	var buf strings.Builder
+	err := e.RunPythonWithOutput(&buf, args...)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(buf.String()), nil
+}
+
+func (e *PythonEnv) RunPythonWithOutput(writer io.Writer, args ...string) error {
 	pythonPath, err := e.Python()
 	if err != nil {
 		return err
 	}
 
 	cmd := exec.Command(pythonPath, args...)
-	cmd.Stdout = os.Stdout
+	if writer != nil {
+		cmd.Stdout = io.MultiWriter(writer, os.Stdout)
+	} else {
+		cmd.Stdout = os.Stdout
+	}
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+func (e *PythonEnv) GetPythonPath() (string, error) {
+	return e.RunPython("-c", `import sys; print(':'.join(sys.path))`)
 }

@@ -279,12 +279,6 @@ func updatePkgConfig(projectPath string) error {
 	pythonPath := env.GetPythonRoot(projectPath)
 	pkgConfigDir := env.GetPythonPkgConfigDir(projectPath)
 
-	if runtime.GOOS == "windows" {
-		if err := generatePkgConfig(pythonPath, pkgConfigDir); err != nil {
-			return err
-		}
-	}
-
 	entries, err := os.ReadDir(pkgConfigDir)
 	if err != nil {
 		return fmt.Errorf("failed to read pkgconfig directory: %v", err)
@@ -410,8 +404,13 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 		return fmt.Errorf("error updating pkg-config: %v", err)
 	}
 
+	pythonHome := env.GetPythonRoot(projectPath)
+	pythonPath, err := pyEnv.GetPythonPath()
+	if err != nil {
+		return fmt.Errorf("failed to get Python path: %v", err)
+	}
 	// Write environment variables to env.txt
-	if err := env.WriteEnvFile(projectPath); err != nil {
+	if err := env.WriteEnvFile(projectPath, pythonHome, pythonPath); err != nil {
 		return fmt.Errorf("error writing environment file: %v", err)
 	}
 

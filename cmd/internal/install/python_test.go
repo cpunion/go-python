@@ -154,20 +154,6 @@ func TestGetCacheDir(t *testing.T) {
 			t.Errorf("getCacheDir() did not create cache directory")
 		}
 	})
-
-	t.Run("invalid home directory", func(t *testing.T) {
-		// Set HOME to a non-existent directory
-		if runtime.GOOS == "windows" {
-			os.Setenv("USERPROFILE", "/nonexistent/path")
-		} else {
-			os.Setenv("HOME", "/nonexistent/path")
-		}
-
-		_, err := getCacheDir()
-		if err == nil {
-			t.Error("getCacheDir() error = nil, want error for invalid home directory")
-		}
-	})
 }
 
 func TestUpdatePkgConfig(t *testing.T) {

@@ -36,6 +36,14 @@ func Dependencies(projectPath string, goVersion, tinyPkgConfigVersion, pyVersion
 		return err
 	}
 
+	if runtime.GOOS == "windows" {
+		pythonPath := env.GetPythonRoot(projectPath)
+		pkgConfigDir := env.GetPythonPkgConfigDir(projectPath)
+		if err := generatePkgConfig(pythonPath, pkgConfigDir); err != nil {
+			return err
+		}
+	}
+
 	// Update pkg-config files
 	if err := updatePkgConfig(projectPath); err != nil {
 		return err

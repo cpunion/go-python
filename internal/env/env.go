@@ -3,7 +3,6 @@ package env
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -112,26 +111,11 @@ func pathSeparator() string {
 }
 
 // WriteEnvFile writes environment variables to .python/env.txt
-func WriteEnvFile(projectPath string) error {
-	pythonHome := GetPythonRoot(projectPath)
-	// Get Python path using python executable
-	env := NewPythonEnv(pythonHome)
-	pythonBin, err := env.Python()
-	if err != nil {
-		return fmt.Errorf("failed to get Python executable: %v", err)
-	}
-
-	// Execute Python to get sys.path
-	cmd := exec.Command(pythonBin, "-c", "import sys; print(':'.join(sys.path))")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to get Python path: %v", err)
-	}
-
+func WriteEnvFile(projectPath, pythonHome, pythonPath string) error {
 	// Prepare environment variables
 	envVars := []string{
 		fmt.Sprintf("PKG_CONFIG_PATH=%s", filepath.Join(pythonHome, "lib", "pkgconfig")),
-		fmt.Sprintf("PYTHONPATH=%s", strings.TrimSpace(string(output))),
+		fmt.Sprintf("PYTHONPATH=%s", strings.TrimSpace(pythonPath)),
 		fmt.Sprintf("PYTHONHOME=%s", pythonHome),
 	}
 

@@ -72,25 +72,13 @@ func TestWriteEnvFile(t *testing.T) {
 		// Create mock Python executable
 		var pythonPath string
 		if runtime.GOOS == "windows" {
-			pythonPath = filepath.Join(binDir, "python.exe")
-			pythonScript := `@echo off
-echo /mock/path1;/mock/path2
-`
-			if err := os.WriteFile(pythonPath, []byte(pythonScript), 0644); err != nil {
-				t.Fatal(err)
-			}
+			pythonPath = "/mock/path1;/mock/path2"
 		} else {
-			pythonPath = filepath.Join(binDir, "python")
-			pythonScript := `#!/bin/sh
-echo "/mock/path1:/mock/path2"
-`
-			if err := os.WriteFile(pythonPath, []byte(pythonScript), 0755); err != nil {
-				t.Fatal(err)
-			}
+			pythonPath = "/mock/path1:/mock/path2"
 		}
 
 		// Test writing env file
-		if err := WriteEnvFile(projectDir); err != nil {
+		if err := WriteEnvFile(projectDir, pythonDir, pythonPath); err != nil {
 			t.Errorf("writeEnvFile() error = %v, want nil", err)
 			return
 		}
@@ -127,18 +115,6 @@ echo "/mock/path1:/mock/path2"
 			if !strings.Contains(envContent, v) {
 				t.Errorf("env.txt missing expected variable %s", v)
 			}
-		}
-	})
-
-	t.Run("missing python executable", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(tmpDir, ".deps/python"), 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		err := WriteEnvFile(tmpDir)
-		if err == nil {
-			t.Error("writeEnvFile() error = nil, want error for missing python executable")
 		}
 	})
 }
