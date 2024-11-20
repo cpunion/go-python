@@ -2,8 +2,9 @@ package install
 
 import (
 	"fmt"
-	"path/filepath"
 	"runtime"
+
+	"github.com/cpunion/go-python/internal/env"
 )
 
 const (
@@ -45,7 +46,7 @@ func getGoURL(version string) string {
 
 // installGo downloads and installs Go in the project directory
 func installGo(projectPath, version string, verbose bool) error {
-	goDir := filepath.Join(projectPath, DepsDir, GoDir)
+	goDir := env.GetGoDir(projectPath)
 	fmt.Printf("Installing Go %s in %s\n", version, goDir)
 	// Get download URL
 	url := getGoURL(version)

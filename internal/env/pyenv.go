@@ -1,4 +1,4 @@
-package python
+package env
 
 import (
 	"fmt"
@@ -9,20 +9,20 @@ import (
 	"runtime"
 )
 
-// Env represents a Python environment
-type Env struct {
+// PythonEnv represents a Python environment
+type PythonEnv struct {
 	Root string // Root directory of the Python installation
 }
 
-// New creates a new Python environment instance
-func New(pythonHome string) *Env {
-	return &Env{
+// NewPythonEnv creates a new Python environment instance
+func NewPythonEnv(pythonHome string) *PythonEnv {
+	return &PythonEnv{
 		Root: pythonHome,
 	}
 }
 
 // Python returns the path to the Python executable
-func (e *Env) Python() (string, error) {
+func (e *PythonEnv) Python() (string, error) {
 	binDir := e.Root
 	if runtime.GOOS != "windows" {
 		binDir = filepath.Join(e.Root, "bin")
@@ -50,12 +50,12 @@ func (e *Env) Python() (string, error) {
 }
 
 // RunPip executes pip with the given arguments
-func (e *Env) RunPip(args ...string) error {
+func (e *PythonEnv) RunPip(args ...string) error {
 	return e.RunPython(append([]string{"-m", "pip"}, args...)...)
 }
 
 // RunPython executes python with the given arguments
-func (e *Env) RunPython(args ...string) error {
+func (e *PythonEnv) RunPython(args ...string) error {
 	pythonPath, err := e.Python()
 	if err != nil {
 		return err

@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/cpunion/go-python/cmd/internal/python"
+	"github.com/cpunion/go-python/internal/env"
 )
 
 const (
@@ -166,8 +166,8 @@ func generatePkgConfig(pythonPath, pkgConfigDir string) error {
 	}
 
 	// Get Python version from the environment
-	env := python.New(pythonPath)
-	pythonBin, err := env.Python()
+	pyEnv := env.NewPythonEnv(pythonPath)
+	pythonBin, err := pyEnv.Python()
 	if err != nil {
 		return fmt.Errorf("failed to get Python executable: %v", err)
 	}
@@ -232,8 +232,8 @@ Cflags: -I${includedir}
 
 // updatePkgConfig updates the prefix in pkg-config files to use absolute path
 func updatePkgConfig(projectPath string) error {
-	pythonPath := GetPythonRoot(projectPath)
-	pkgConfigDir := GetPythonPkgConfigDir(projectPath)
+	pythonPath := env.GetPythonRoot(projectPath)
+	pkgConfigDir := env.GetPythonPkgConfigDir(projectPath)
 
 	if runtime.GOOS == "windows" {
 		if err := generatePkgConfig(pythonPath, pkgConfigDir); err != nil {
@@ -326,59 +326,10 @@ func updatePkgConfig(projectPath string) error {
 	return nil
 }
 
-// writeEnvFile writes environment variables to .python/env.txt
-func writeEnvFile(projectPath string) error {
-	pythonDir := GetPythonRoot(projectPath)
-	absPath, err := filepath.Abs(pythonDir)
-	if err != nil {
-		return fmt.Errorf("failed to get absolute path: %v", err)
-	}
-
-	// Get Python path using python executable
-	env := python.New(absPath)
-	pythonBin, err := env.Python()
-	if err != nil {
-		return fmt.Errorf("failed to get Python executable: %v", err)
-	}
-
-	// Execute Python to get sys.path
-	cmd := exec.Command(pythonBin, "-c", "import sys; print(':'.join(sys.path))")
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to get Python path: %v", err)
-	}
-
-	// Prepare environment variables
-	envVars := []string{
-		fmt.Sprintf("PKG_CONFIG_PATH=%s", filepath.Join(absPath, "lib", "pkgconfig")),
-		fmt.Sprintf("PYTHONPATH=%s", strings.TrimSpace(string(output))),
-		fmt.Sprintf("PYTHONHOME=%s", absPath),
-	}
-
-	// Write to env.txt
-	envFile := filepath.Join(pythonDir, "env.txt")
-	if err := os.WriteFile(envFile, []byte(strings.Join(envVars, "\n")), 0644); err != nil {
-		return fmt.Errorf("failed to write env file: %v", err)
-	}
-
-	return nil
-}
-
-// LoadEnvFile loads environment variables from .python/env.txt in the given directory
-func LoadEnvFile(dir string) ([]string, error) {
-	envFile := filepath.Join(GetPythonRoot(dir), "env.txt")
-	content, err := os.ReadFile(envFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read env file: %v", err)
-	}
-
-	return strings.Split(strings.TrimSpace(string(content)), "\n"), nil
-}
-
 // installPythonEnv downloads and installs Python standalone build
 func installPythonEnv(projectPath string, version, buildDate string, freeThreaded, debug bool, verbose bool) error {
 	fmt.Printf("Installing Python %s in %s\n", version, projectPath)
-	pythonDir := GetPythonRoot(projectPath)
+	pythonDir := env.GetPythonRoot(projectPath)
 
 	// Remove existing Python directory if it exists
 	if err := os.RemoveAll(pythonDir); err != nil {
@@ -401,13 +352,13 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 	}
 
 	// Create Python environment
-	env := python.New(pythonDir)
+	pyEnv := env.NewPythonEnv(pythonDir)
 
 	if verbose {
 		fmt.Println("Installing Python dependencies...")
 	}
 
-	if err := env.RunPip("install", "--upgrade", "pip", "setuptools", "wheel"); err != nil {
+	if err := pyEnv.RunPip("install", "--upgrade", "pip", "setuptools", "wheel"); err != nil {
 		return fmt.Errorf("error upgrading pip, setuptools, whell")
 	}
 
@@ -416,7 +367,7 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 	}
 
 	// Write environment variables to env.txt
-	if err := writeEnvFile(projectPath); err != nil {
+	if err := env.WriteEnvFile(projectPath); err != nil {
 		return fmt.Errorf("error writing environment file: %v", err)
 	}
 

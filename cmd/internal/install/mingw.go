@@ -2,6 +2,8 @@ package install
 
 import (
 	"fmt"
+
+	"github.com/cpunion/go-python/internal/env"
 )
 
 const (
@@ -10,7 +12,7 @@ const (
 )
 
 func installMingw(projectPath string, verbose bool) error {
-	root := GetMingwDir(projectPath)
+	root := env.GetMingwDir(projectPath)
 	fmt.Printf("Installing mingw in %v\n", root)
 	return downloadAndExtract("mingw", mingwVersion, mingwURL, root, "", verbose)
 }

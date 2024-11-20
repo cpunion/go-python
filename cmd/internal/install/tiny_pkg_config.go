@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/cpunion/go-python/internal/env"
 )
 
 const (
@@ -13,7 +15,7 @@ const (
 )
 
 func installTinyPkgConfig(projectPath, version string, verbose bool) error {
-	dir := GetTinyPkgConfigDir(projectPath)
+	dir := env.GetTinyPkgConfigDir(projectPath)
 	// Determine OS and architecture
 	goos := runtime.GOOS
 	arch := runtime.GOARCH

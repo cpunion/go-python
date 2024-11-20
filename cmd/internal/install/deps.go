@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+
+	"github.com/cpunion/go-python/internal/env"
 )
 
 // Dependencies installs all required dependencies for the project
@@ -22,7 +24,7 @@ func Dependencies(projectPath string, goVersion, tinyPkgConfigVersion, pyVersion
 	if err := installGo(projectPath, goVersion, verbose); err != nil {
 		return err
 	}
-	SetEnv(projectPath)
+	env.SetBuildEnv(projectPath)
 
 	// Install Go dependencies
 	if err := installGoDeps(projectPath); err != nil {
