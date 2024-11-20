@@ -139,10 +139,7 @@ func ProcessArgsWithLDFlags(args []string, projectRoot, pythonPath, pythonHome s
 	result := make([]string, 0, len(args))
 
 	// Prepare the -X flags we want to add
-	var xFlags []string
-	if pythonHome != "" {
-		xFlags = append(xFlags, fmt.Sprintf("-X 'github.com/cpunion/go-python.ProjectRoot=%s'", projectRoot))
-	}
+	xFlags := fmt.Sprintf("-X 'github.com/cpunion/go-python.ProjectRoot=%s'", projectRoot)
 
 	// Prepare rpath flag if needed
 	var rpathFlag string
@@ -179,10 +176,7 @@ func ProcessArgsWithLDFlags(args []string, projectRoot, pythonPath, pythonHome s
 			}
 
 			// Combine all flags
-			var allFlags []string
-			if len(xFlags) > 0 {
-				allFlags = append(allFlags, xFlags...)
-			}
+			allFlags := []string{xFlags}
 			if strings.TrimSpace(existingFlags) != "" {
 				allFlags = append(allFlags, existingFlags)
 			}
@@ -203,8 +197,7 @@ func ProcessArgsWithLDFlags(args []string, projectRoot, pythonPath, pythonHome s
 	// If no existing -ldflags found, add new ones at the beginning if we have any flags to add
 	if !foundLDFlags {
 		if len(xFlags) > 0 || rpathFlag != "" {
-			var allFlags []string
-			allFlags = append(allFlags, xFlags...)
+			allFlags := []string{xFlags}
 			if rpathFlag != "" {
 				allFlags = append(allFlags, rpathFlag)
 			}
