@@ -93,20 +93,20 @@ assert obj.int32_field == 2147483647
 assert obj.int64_field == 9223372036854775807
 assert obj.int_field == 1234567890
 assert obj.uint8_field == 255
-assert obj.uint16_field == 65535
-assert obj.uint32_field == 4294967295
-assert obj.uint64_field == 18446744073709551615
-assert obj.uint_field == 4294967295
-assert abs(obj.float32_field - 3.14) < 0.0001
-assert abs(obj.float64_field - 3.14159265359) < 0.0000001
-assert abs(obj.complex64_field - (1.5 + 2.5j)) < 0.0001
-assert abs(obj.complex128_field - (3.14 + 2.718j)) < 0.0000001
+assert obj.uint16_field == 65535, f"Expected 65535, got {obj.uint16_field}"
+assert obj.uint32_field == 4294967295, f"Expected 4294967295, got {obj.uint32_field}"
+assert obj.uint64_field == 18446744073709551615, f"Expected 18446744073709551615, got {obj.uint64_field}"
+assert obj.uint_field == 4294967295, f"Expected 4294967295, got {obj.uint_field}"
+assert abs(obj.float32_field - 3.14) < 0.0001, f"Expected 3.14, got {obj.float32_field}"
+assert abs(obj.float64_field - 3.14159265359) < 0.0000001, f"Expected 3.14159265359, got {obj.float64_field}"
+assert abs(obj.complex64_field - (1.5 + 2.5j)) < 0.0001, f"Expected (1.5 + 2.5j), got {obj.complex64_field}"
+assert abs(obj.complex128_field - (3.14 + 2.718j)) < 0.0000001, f"Expected (3.14 + 2.718j), got {obj.complex128_field}"
 
 # verify non-C-compatible types
-assert obj.string_field == "test string"
-assert obj.slice_field == [1, 2, 3]
-assert obj.map_field["key"] == 42
-assert obj.struct_field.x == 100
+assert obj.string_field == "test string", f"Expected 'test string', got {obj.string_field}"
+assert obj.slice_field == [1, 2, 3], f"Expected [1, 2, 3], got {obj.slice_field}"
+assert obj.map_field["key"] == 42, f"Expected 42, got {obj.map_field['key']}"
+assert obj.struct_field.x == 100, f"Expected 100, got {obj.struct_field.x}"
 `
 
 	err := RunString(code)
