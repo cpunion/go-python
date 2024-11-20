@@ -95,13 +95,15 @@ jobs:
         run: go install -v ./...
 
       - name: Test with coverage
-        run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+        run: go test -coverprofile=coverage.txt -covermode=atomic ./...
       
       - name: Test gopy
         run: |
+          set -x
           gopy init $HOME/foo
           cd $HOME/foo
           gopy build -v .
+          export GP_INJECT_DEBUG=1
           gopy run -v .
           gopy install -v .
 
