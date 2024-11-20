@@ -24,17 +24,25 @@ func From(from any) Object {
 	case int64:
 		return newObject(C.PyLong_FromLongLong(C.longlong(v)))
 	case int:
-		return newObject(C.PyLong_FromLong(C.long(v)))
+		if unsafe.Sizeof(v) == unsafe.Sizeof(int64(0)) {
+			return newObject(C.PyLong_FromLongLong(C.longlong(v)))
+		} else {
+			return newObject(C.PyLong_FromLong(C.long(v)))
+		}
 	case uint8:
-		return newObject(C.PyLong_FromLong(C.long(v)))
+		return newObject(C.PyLong_FromUnsignedLong(C.ulong(v)))
 	case uint16:
-		return newObject(C.PyLong_FromLong(C.long(v)))
+		return newObject(C.PyLong_FromUnsignedLong(C.ulong(v)))
 	case uint32:
-		return newObject(C.PyLong_FromLong(C.long(v)))
+		return newObject(C.PyLong_FromUnsignedLong(C.ulong(v)))
 	case uint64:
 		return newObject(C.PyLong_FromUnsignedLongLong(C.ulonglong(v)))
 	case uint:
-		return newObject(C.PyLong_FromUnsignedLong(C.ulong(v)))
+		if unsafe.Sizeof(v) == unsafe.Sizeof(uint64(0)) {
+			return newObject(C.PyLong_FromUnsignedLongLong(C.ulonglong(v)))
+		} else {
+			return newObject(C.PyLong_FromUnsignedLong(C.ulong(v)))
+		}
 	case float64:
 		return newObject(C.PyFloat_FromDouble(C.double(v)))
 	case float32:

@@ -43,11 +43,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-latest
-          - ubuntu-24.04
-    runs-on: ${{matrix.os}}
+        sys:
+          - {os: macos-latest, shell: bash}
+          - {os: ubuntu-24.04, shell: bash}
+          - {os: windows-latest, shell: bash}
+    defaults:
+      run:
+        shell: ${{ matrix.sys.shell }}
+    runs-on: ${{matrix.sys.os}}
     steps:
+      # - uses: msys2/setup-msys2@v2
+      #   if: matrix.sys.os == 'windows-latest'
+      #   with:
+      #     update: true
+      #     install: >-
+      #       curl
+      #       git
+      #       pkg-config
+
       - uses: actions/checkout@v4
 
       - name: Set up Go
@@ -55,14 +68,44 @@ jobs:
         with:
           go-version: 1.23
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          update-environment: true
+      
+      - name: Generate Python pkg-config for windows (patch)
+        if: matrix.sys.os == 'windows-latest'
+        run: |
+          mkdir -p $PKG_CONFIG_PATH
+          cp .github/assets/python3-embed.pc $PKG_CONFIG_PATH/
+      
+      - name: Install tiny-pkg-config for windows (patch)
+        if: matrix.sys.os == 'windows-latest'
+        run: |
+          set -x
+          curl -L https://github.com/cpunion/tiny-pkg-config/releases/download/v0.2.0/tiny-pkg-config_Windows_x86_64.zip -o /tmp/tiny-pkg-config.zip
+          unzip /tmp/tiny-pkg-config.zip -d $HOME/bin
+          mv $HOME/bin/tiny-pkg-config.exe $HOME/bin/pkg-config.exe
+          echo $PKG_CONFIG_PATH
+          cat $PKG_CONFIG_PATH/python3-embed.pc
+          pkg-config --libs python3-embed
+          pkg-config --cflags python3-embed
+
       - name: Build
-        run: go build -v ./...
+        run: go install -v ./...
 
       - name: Test with coverage
         run: go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+      
+      - name: Test gopy
+        run: |
+          gopy init $HOME/foo
+          cd $HOME/foo
+          gopy build -v .
+          gopy run -v .
+          gopy install -v .
 
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-24.04'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
