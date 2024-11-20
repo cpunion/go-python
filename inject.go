@@ -11,13 +11,11 @@ var ProjectRoot string
 
 func init() {
 	if ProjectRoot == "" {
-		fmt.Fprintf(os.Stderr, "ProjectRoot is not set\n")
-		return
+		panic("ProjectRoot is not set, compile with -ldflags '-X github.com/cpunion/go-python.ProjectRoot=/path/to/project/.deps'")
 	}
 	envs, err := env.ReadEnv(ProjectRoot)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read env: %s\n", err)
-		return
+		panic(fmt.Sprintf("Failed to read env: %s", err))
 	}
 	for key, value := range envs {
 		os.Setenv(key, value)
