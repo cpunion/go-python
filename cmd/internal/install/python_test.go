@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -131,7 +132,11 @@ func TestGetCacheDir(t *testing.T) {
 
 	t.Run("valid home directory", func(t *testing.T) {
 		tmpDir := t.TempDir()
-		os.Setenv("HOME", tmpDir)
+		if runtime.GOOS == "windows" {
+			os.Setenv("USERPROFILE", tmpDir)
+		} else {
+			os.Setenv("HOME", tmpDir)
+		}
 
 		got, err := getCacheDir()
 		if err != nil {
@@ -152,7 +157,11 @@ func TestGetCacheDir(t *testing.T) {
 
 	t.Run("invalid home directory", func(t *testing.T) {
 		// Set HOME to a non-existent directory
-		os.Setenv("HOME", "/nonexistent/path")
+		if runtime.GOOS == "windows" {
+			os.Setenv("USERPROFILE", "/nonexistent/path")
+		} else {
+			os.Setenv("HOME", "/nonexistent/path")
+		}
 
 		_, err := getCacheDir()
 		if err == nil {
@@ -162,7 +171,7 @@ func TestGetCacheDir(t *testing.T) {
 }
 
 func TestUpdatePkgConfig(t *testing.T) {
-	t.Run("valid pkg-config files", func(t *testing.T) {
+	t.Run("freethreaded pkg-config files", func(t *testing.T) {
 		// Create temporary directory structure
 		tmpDir := t.TempDir()
 		pkgConfigDir := env.GetPythonPkgConfigDir(tmpDir)
@@ -170,10 +179,26 @@ func TestUpdatePkgConfig(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Create test .pc files
+		// Create test .pc files with freethreaded content
 		testFiles := map[string]string{
-			"python-3.13t.pc":      "prefix=/install\nlibdir=${prefix}/lib\n",
-			"python-3.13-embed.pc": "prefix=/install\nlibdir=${prefix}/lib\n",
+			"python-3.13t.pc": `prefix=/install
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: Python
+Description: Python library
+Version: 3.13
+Libs: -L${libdir} -lpython3t
+Cflags: -I${includedir}`,
+			"python-3.13t-embed.pc": `prefix=/install
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: Python
+Description: Embed Python into an application
+Version: 3.13
+Libs: -L${libdir} -lpython313t
+Cflags: -I${includedir}`,
 		}
 
 		for filename, content := range testFiles {
@@ -189,19 +214,29 @@ func TestUpdatePkgConfig(t *testing.T) {
 		}
 
 		// Verify the generated files
-		expectedFiles := []string{
-			"python-3.13t.pc",
-			"python-3.13.pc",
-			"python3t.pc",
-			"python3.pc",
-			"python-3.13-embed.pc",
-			"python3-embed.pc",
+		expectedFiles := map[string]struct {
+			shouldExist bool
+			libName     string
+		}{
+			// Freethreaded versions
+			"python-3.13t.pc":       {true, "-lpython3t"},
+			"python3t.pc":           {true, "-lpython3t"},
+			"python-3.13t-embed.pc": {true, "-lpython313t"},
+			"python3t-embed.pc":     {true, "-lpython313t"},
+			// Non-t versions (same content as freethreaded)
+			"python-3.13.pc":       {true, "-lpython3t"},
+			"python3.pc":           {true, "-lpython3t"},
+			"python-3.13-embed.pc": {true, "-lpython313t"},
+			"python3-embed.pc":     {true, "-lpython313t"},
 		}
 
-		for _, filename := range expectedFiles {
+		absPath, _ := filepath.Abs(filepath.Join(tmpDir, ".deps/python"))
+		for filename, expected := range expectedFiles {
 			path := filepath.Join(pkgConfigDir, filename)
 			if _, err := os.Stat(path); os.IsNotExist(err) {
-				t.Errorf("Expected file %s was not created", filename)
+				if expected.shouldExist {
+					t.Errorf("Expected file %s was not created", filename)
+				}
 				continue
 			}
 
@@ -211,10 +246,97 @@ func TestUpdatePkgConfig(t *testing.T) {
 				continue
 			}
 
-			absPath, _ := filepath.Abs(filepath.Join(tmpDir, ".deps/python"))
+			// Check prefix
 			expectedPrefix := fmt.Sprintf("prefix=%s", absPath)
 			if !strings.Contains(string(content), expectedPrefix) {
 				t.Errorf("File %s does not contain expected prefix %s", filename, expectedPrefix)
+			}
+
+			// Check library name
+			if !strings.Contains(string(content), expected.libName) {
+				t.Errorf("File %s does not contain expected library name %s", filename, expected.libName)
+			}
+		}
+	})
+
+	t.Run("non-freethreaded pkg-config files", func(t *testing.T) {
+		// Create temporary directory structure
+		tmpDir := t.TempDir()
+		pkgConfigDir := env.GetPythonPkgConfigDir(tmpDir)
+		if err := os.MkdirAll(pkgConfigDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		// Create test .pc files with non-freethreaded content
+		testFiles := map[string]string{
+			"python-3.13.pc": `prefix=/install
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: Python
+Description: Python library
+Version: 3.13
+Libs: -L${libdir} -lpython3
+Cflags: -I${includedir}`,
+			"python-3.13-embed.pc": `prefix=/install
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: Python
+Description: Embed Python into an application
+Version: 3.13
+Libs: -L${libdir} -lpython313
+Cflags: -I${includedir}`,
+		}
+
+		for filename, content := range testFiles {
+			if err := os.WriteFile(filepath.Join(pkgConfigDir, filename), []byte(content), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// Test updating pkg-config files
+		if err := updatePkgConfig(tmpDir); err != nil {
+			t.Errorf("updatePkgConfig() error = %v, want nil", err)
+			return
+		}
+
+		// Verify the generated files
+		expectedFiles := map[string]struct {
+			shouldExist bool
+			libName     string
+		}{
+			"python-3.13.pc":       {true, "-lpython3"},
+			"python3.pc":           {true, "-lpython3"},
+			"python-3.13-embed.pc": {true, "-lpython313"},
+			"python3-embed.pc":     {true, "-lpython313"},
+		}
+
+		absPath, _ := filepath.Abs(filepath.Join(tmpDir, ".deps/python"))
+		for filename, expected := range expectedFiles {
+			path := filepath.Join(pkgConfigDir, filename)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				if expected.shouldExist {
+					t.Errorf("Expected file %s was not created", filename)
+				}
+				continue
+			}
+
+			content, err := os.ReadFile(path)
+			if err != nil {
+				t.Errorf("Failed to read file %s: %v", filename, err)
+				continue
+			}
+
+			// Check prefix
+			expectedPrefix := fmt.Sprintf("prefix=%s", absPath)
+			if !strings.Contains(string(content), expectedPrefix) {
+				t.Errorf("File %s does not contain expected prefix %s", filename, expectedPrefix)
+			}
+
+			// Check library name
+			if !strings.Contains(string(content), expected.libName) {
+				t.Errorf("File %s does not contain expected library name %s", filename, expected.libName)
 			}
 		}
 	})

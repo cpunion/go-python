@@ -165,25 +165,45 @@ func generatePkgConfig(pythonPath, pkgConfigDir string) error {
 		return fmt.Errorf("failed to create pkgconfig directory: %v", err)
 	}
 
-	// Get Python version from the environment
+	// Get Python environment
 	pyEnv := env.NewPythonEnv(pythonPath)
 	pythonBin, err := pyEnv.Python()
 	if err != nil {
 		return fmt.Errorf("failed to get Python executable: %v", err)
 	}
 
-	// Get Python version
-	cmd := exec.Command(pythonBin, "-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+	// Get Python version and check if freethreaded
+	cmd := exec.Command(pythonBin, "-c", `
+import sys
+import sysconfig
+version = f'{sys.version_info.major}.{sys.version_info.minor}'
+is_freethreaded = hasattr(sys, "gettotalrefcount")
+print(f'{version}\n{is_freethreaded}')
+`)
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to get Python version: %v", err)
+		return fmt.Errorf("failed to get Python info: %v", err)
 	}
-	version := strings.TrimSpace(string(output))
 
-	// Template for the pkg-config file
-	pcTemplate := `prefix=${pcfiledir}/../..
+	info := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(info) != 2 {
+		return fmt.Errorf("unexpected Python info output format")
+	}
+
+	version := info[0]
+	isFreethreaded := info[1] == "True"
+
+	// Prepare version-specific library names
+	versionNoPoints := strings.ReplaceAll(version, ".", "")
+	libSuffix := ""
+	if isFreethreaded {
+		libSuffix = "t"
+	}
+
+	// Template for the pkg-config files
+	embedTemplate := `prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
-libdir=${exec_prefix}
+libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
 Name: Python
@@ -191,39 +211,63 @@ Description: Embed Python into an application
 Requires:
 Version: %s
 Libs.private: 
-Libs: -L${libdir} -lpython313
+Libs: -L${libdir} -lpython%s%s
 Cflags: -I${includedir}
 `
-	// TODO: need update libs
 
-	// Create the main pkg-config files
-	files := []struct {
-		name    string
-		content string
+	normalTemplate := `prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: Python
+Description: Python library
+Requires:
+Version: %s
+Libs.private: 
+Libs: -L${libdir} -lpython3%s
+Cflags: -I${includedir}
+`
+
+	// Generate file pairs
+	filePairs := []struct {
+		name     string
+		template string
+		embed    bool
 	}{
-		{
-			fmt.Sprintf("python-%s.pc", version),
-			fmt.Sprintf(pcTemplate, version),
-		},
-		{
-			fmt.Sprintf("python-%s-embed.pc", version),
-			fmt.Sprintf(pcTemplate, version),
-		},
-		{
-			"python3.pc",
-			fmt.Sprintf(pcTemplate, version),
-		},
-		{
-			"python3-embed.pc",
-			fmt.Sprintf(pcTemplate, version),
-		},
+		{fmt.Sprintf("python-%s%s.pc", version, libSuffix), normalTemplate, false},
+		{fmt.Sprintf("python-%s%s-embed.pc", version, libSuffix), embedTemplate, true},
+		{"python3" + libSuffix + ".pc", normalTemplate, false},
+		{"python3" + libSuffix + "-embed.pc", embedTemplate, true},
+	}
+
+	// If freethreaded, also generate non-t versions with the same content
+	if isFreethreaded {
+		additionalPairs := []struct {
+			name     string
+			template string
+			embed    bool
+		}{
+			{fmt.Sprintf("python-%s.pc", version), normalTemplate, false},
+			{fmt.Sprintf("python-%s-embed.pc", version), embedTemplate, true},
+			{"python3.pc", normalTemplate, false},
+			{"python3-embed.pc", embedTemplate, true},
+		}
+		filePairs = append(filePairs, additionalPairs...)
 	}
 
 	// Write all pkg-config files
-	for _, file := range files {
-		pcPath := filepath.Join(pkgConfigDir, file.name)
-		if err := os.WriteFile(pcPath, []byte(file.content), 0644); err != nil {
-			return fmt.Errorf("failed to write %s: %v", file.name, err)
+	for _, pair := range filePairs {
+		pcPath := filepath.Join(pkgConfigDir, pair.name)
+		var content string
+		if pair.embed {
+			content = fmt.Sprintf(pair.template, version, versionNoPoints, libSuffix)
+		} else {
+			content = fmt.Sprintf(pair.template, version, libSuffix)
+		}
+
+		if err := os.WriteFile(pcPath, []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write %s: %v", pair.name, err)
 		}
 	}
 
