@@ -83,5 +83,5 @@ func (e *PythonEnv) RunPythonWithOutput(writer io.Writer, args ...string) error 
 }
 
 func (e *PythonEnv) GetPythonPath() (string, error) {
-	return e.RunPython("-c", `import sys; print(':'.join(sys.path))`)
+	return e.RunPython("-c", `import os,sys; print(os.pathsep.join(sys.path))`)
 }
