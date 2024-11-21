@@ -25,7 +25,7 @@ var installCmd = &cobra.Command{
 	}(),
 	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := rungo.RunGoCommand("install", args); err != nil {
+		if err := rungo.RunCommand("go", append([]string{"install"}, args...)); err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}

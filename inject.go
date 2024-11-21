@@ -29,6 +29,7 @@ func init() {
 		fmt.Fprintf(os.Stderr, "End of envs\n")
 	}
 	for key, value := range envs {
+		fmt.Fprintf(os.Stderr, "Injecting env: %s=%s\n", key, value)
 		os.Setenv(key, value)
 	}
 }

@@ -2,7 +2,6 @@ package rungo
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -69,35 +68,33 @@ func GetPackageDir(pkgPath string) (string, error) {
 	return absPath, nil
 }
 
+func FindProjectRoot(dir string) (string, error) {
+	env := env.NewPythonEnv(env.GetPythonRoot(dir))
+	_, err := env.Python()
+	if err == nil {
+		return dir, nil
+	}
+	parentDir := filepath.Dir(dir)
+	if parentDir == dir {
+		return "", fmt.Errorf("failed to find Gopy project")
+	}
+	return FindProjectRoot(parentDir)
+}
+
 // RunGoCommand executes a Go command with Python environment properly configured
-func RunGoCommand(command string, args []string) error {
-	// Find the package argument
-	pkgIndex := FindPackageIndex(args)
-
-	// TODO: don't depend on external go command
-	listArgs := []string{"list", "-find", "-json"}
-
-	if pkgIndex != -1 {
-		pkgPath := args[pkgIndex]
-		listArgs = append(listArgs, pkgPath)
+func RunCommand(command string, args []string) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %v", err)
 	}
-	cmd := exec.Command("go", listArgs...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to get module info: %v", err)
+	projectRoot, err := FindProjectRoot(wd)
+	if err != nil {
+		return fmt.Errorf("should run this command in a Gopy project: %v", err)
 	}
-	var listInfo ListInfo
-	if err := json.NewDecoder(&out).Decode(&listInfo); err != nil {
-		return fmt.Errorf("failed to parse module info: %v", err)
-	}
-	projectRoot := listInfo.Root
 	env.SetBuildEnv(projectRoot)
 
 	// Set up environment variables
 	goEnv := []string{}
-
 	// Get PYTHONPATH and PYTHONHOME from env.txt
 	var pythonPath, pythonHome string
 	if additionalEnv, err := env.ReadEnv(projectRoot); err == nil {
@@ -110,12 +107,15 @@ func RunGoCommand(command string, args []string) error {
 		fmt.Fprintf(os.Stderr, "Warning: could not load environment variables: %v\n", err)
 	}
 
-	// Process args to inject Python paths via ldflags
-	processedArgs := ProcessArgsWithLDFlags(args, projectRoot, pythonPath, pythonHome)
+	cmdArgs := args
+	if command == "go" {
+		goCmd := args[0]
+		args = args[1:]
+		// Process args to inject Python paths via ldflags
+		cmdArgs = append([]string{goCmd}, ProcessArgsWithLDFlags(args, projectRoot, pythonPath, pythonHome)...)
+	}
 
-	// Prepare go command with processed arguments
-	goArgs := append([]string{"go", command}, processedArgs...)
-	cmd = exec.Command(goArgs[0], goArgs[1:]...)
+	cmd := exec.Command(command, cmdArgs...)
 	cmd.Env = append(goEnv, os.Environ()...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
