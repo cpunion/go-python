@@ -1,0 +1,55 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Gopy
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-24.04
+          - windows-latest
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+
+      - name: Install gopy
+        run: go install ./cmd/gopy
+
+      - name: Test init project
+        run: gopy init $HOME/foo
+
+      - name: Test build project
+        run: |
+          cd $HOME/foo
+          gopy build -o foo.out .
+          ./foo.out
+
+      - name: Test run project
+        run: |
+          export GP_INJECT_DEBUG=1
+          cd $HOME/foo
+          gopy run -v .
+
+      - name: Test install project
+        run: |
+          cd $HOME/foo
+          gopy install -v .

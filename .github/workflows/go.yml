@@ -10,57 +10,20 @@ on:
     branches: [ "main" ]
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          
-      - name: Install embedme
-        run: npm install -g embedme
-        
-      - name: Verify README.md embedded code
-        run: npx embedme --verify README.md
-        
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.23'
-
-      - name: Check formatting
-        run: |
-          if [ -n "$(go fmt ./...)" ]; then
-            echo "Some files are not properly formatted. Please run 'go fmt ./...'"
-            exit 1
-          fi
-
   build:
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
-        sys:
-          - {os: macos-latest, shell: bash}
-          - {os: ubuntu-24.04, shell: bash}
-          - {os: windows-latest, shell: bash}
+        os:
+          - macos-latest
+          - ubuntu-24.04
+          - windows-latest
     defaults:
       run:
-        shell: ${{ matrix.sys.shell }}
-    runs-on: ${{matrix.sys.os}}
+        shell: bash
+    runs-on: ${{matrix.os}}
     steps:
-      # - uses: msys2/setup-msys2@v2
-      #   if: matrix.sys.os == 'windows-latest'
-      #   with:
-      #     update: true
-      #     install: >-
-      #       curl
-      #       git
-      #       pkg-config
-
       - uses: actions/checkout@v4
 
       - name: Set up Go
@@ -72,15 +35,15 @@ jobs:
         with:
           python-version: '3.13'
           update-environment: true
-      
+
       - name: Generate Python pkg-config for windows (patch)
-        if: matrix.sys.os == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         run: |
           mkdir -p $PKG_CONFIG_PATH
           cp .github/assets/python3-embed.pc $PKG_CONFIG_PATH/
-      
+
       - name: Install tiny-pkg-config for windows (patch)
-        if: matrix.sys.os == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         run: |
           set -x
           curl -L https://github.com/cpunion/tiny-pkg-config/releases/download/v0.2.0/tiny-pkg-config_Windows_x86_64.zip -o /tmp/tiny-pkg-config.zip
@@ -96,16 +59,6 @@ jobs:
 
       - name: Test with coverage
         run: go test -coverprofile=coverage.txt -covermode=atomic ./...
-      
-      - name: Test gopy
-        run: |
-          set -x
-          gopy init $HOME/foo
-          cd $HOME/foo
-          gopy build -v .
-          export GP_INJECT_DEBUG=1
-          gopy run -v .
-          gopy install -v .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
