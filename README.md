@@ -1,12 +1,12 @@
 # go-python: Write Python in Go - The most intuitive Python wrapper for Golang
 
-[![Build Status](https://github.com/cpunion/go-python/actions/workflows/go.yml/badge.svg)](https://github.com/cpunion/go-python/actions/workflows/go.yml)
-[![Coverage Status](https://codecov.io/github/cpunion/go-python/graph/badge.svg?token=DLVMvjAOFM)](https://codecov.io/github/cpunion/go-python)
+[![Build Status](https://github.com/gotray/go-python/actions/workflows/go.yml/badge.svg)](https://github.com/gotray/go-python/actions/workflows/go.yml)
+[![codecov](https://codecov.io/github/gotray/go-python/graph/badge.svg?token=TnaFHV1E3y)](https://codecov.io/github/gotray/go-python)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/cpunion/go-python)
 [![GitHub commits](https://badgen.net/github/commits/cpunion/go-python)](https://GitHub.com/Naereen/cpunion/go-python/commit/)
-[![GitHub release](https://img.shields.io/github/v/tag/cpunion/go-python.svg?label=release)](https://github.com/cpunion/go-python/releases)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cpunion/go-python)](https://goreportcard.com/report/github.com/cpunion/go-python)
-[![Go Reference](https://pkg.go.dev/badge/github.com/cpunion/go-python.svg)](https://pkg.go.dev/github.com/cpunion/go-python)
+[![GitHub release](https://img.shields.io/github/v/tag/cpunion/go-python.svg?label=release)](https://github.com/gotray/go-python/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gotray/go-python)](https://goreportcard.com/report/github.com/gotray/go-python)
+[![Go Reference](https://pkg.go.dev/badge/github.com/gotray/go-python.svg)](https://pkg.go.dev/github.com/gotray/go-python)
 
 ## Goal
 
@@ -57,7 +57,7 @@ See the [examples](demo).
 ```go
 package main
 
-import . "github.com/cpunion/go-python"
+import . "github.com/gotray/go-python"
 
 func main() {
 	Initialize()
@@ -75,7 +75,7 @@ func main() {
 ```go
 package main
 
-import . "github.com/cpunion/go-python"
+import . "github.com/gotray/go-python"
 
 type plt struct {
 	Module
@@ -113,7 +113,7 @@ package foo
 import (
 	"fmt"
 
-	. "github.com/cpunion/go-python"
+	. "github.com/gotray/go-python"
 )
 
 type Point struct {
@@ -165,8 +165,8 @@ package main
 import (
 	"fmt"
 
-	. "github.com/cpunion/go-python"
-	"github.com/cpunion/go-python/demo/module/foo"
+	. "github.com/gotray/go-python"
+	"github.com/gotray/go-python/demo/module/foo"
 )
 
 func main() {
@@ -235,7 +235,7 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/cpunion/go-python"
+	. "github.com/gotray/go-python"
 )
 
 /*

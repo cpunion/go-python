@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/cpunion/go-python"
+	. "github.com/gotray/go-python"
 )
 
 /*

@@ -1,7 +1,7 @@
 package math
 
 import (
-	gp "github.com/cpunion/go-python"
+	gp "github.com/gotray/go-python"
 )
 
 var math_ gp.Module

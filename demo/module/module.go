@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	. "github.com/cpunion/go-python"
-	"github.com/cpunion/go-python/demo/module/foo"
+	. "github.com/gotray/go-python"
+	"github.com/gotray/go-python/demo/module/foo"
 )
 
 func main() {

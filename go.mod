@@ -1,4 +1,4 @@
-module github.com/cpunion/go-python
+module github.com/gotray/go-python
 
 go 1.21
 
