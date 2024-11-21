@@ -106,10 +106,6 @@ func getPythonURL(version, buildDate, arch, os string, freeThreaded, debug bool)
 
 // updateMacOSDylibs updates the install names of dylib files on macOS
 func updateMacOSDylibs(pythonDir string, verbose bool) error {
-	if runtime.GOOS != "darwin" {
-		return nil
-	}
-
 	libDir := filepath.Join(pythonDir, "lib")
 	entries, err := os.ReadDir(libDir)
 	if err != nil {
@@ -159,14 +155,15 @@ func updateMacOSDylibs(pythonDir string, verbose bool) error {
 	return nil
 }
 
-// generatePkgConfig generates pkg-config files for Windows
-func generatePkgConfig(pythonPath, pkgConfigDir string) error {
+// genWinPyPkgConfig generates pkg-config files for Windows
+func genWinPyPkgConfig(pythonRoot, pkgConfigDir string) error {
+	fmt.Printf("Generating pkg-config files in %s\n", pkgConfigDir)
 	if err := os.MkdirAll(pkgConfigDir, 0755); err != nil {
 		return fmt.Errorf("failed to create pkgconfig directory: %v", err)
 	}
 
 	// Get Python environment
-	pyEnv := env.NewPythonEnv(pythonPath)
+	pyEnv := env.NewPythonEnv(pythonRoot)
 	pythonBin, err := pyEnv.Python()
 	if err != nil {
 		return fmt.Errorf("failed to get Python executable: %v", err)
@@ -190,8 +187,8 @@ print(f'{version}\n{is_freethreaded}')
 		return fmt.Errorf("unexpected Python info output format")
 	}
 
-	version := info[0]
-	isFreethreaded := info[1] == "True"
+	version := strings.TrimSpace(info[0])
+	isFreethreaded := strings.TrimSpace(info[1]) == "True"
 
 	// Prepare version-specific library names
 	versionNoPoints := strings.ReplaceAll(version, ".", "")
@@ -210,7 +207,7 @@ Name: Python
 Description: Embed Python into an application
 Requires:
 Version: %s
-Libs.private: 
+Libs.private:
 Libs: -L${libdir} -lpython%s%s
 Cflags: -I${includedir}
 `
@@ -224,7 +221,7 @@ Name: Python
 Description: Python library
 Requires:
 Version: %s
-Libs.private: 
+Libs.private:
 Libs: -L${libdir} -lpython3%s
 Cflags: -I${includedir}
 `
@@ -265,7 +262,6 @@ Cflags: -I${includedir}
 		} else {
 			content = fmt.Sprintf(pair.template, version, libSuffix)
 		}
-
 		if err := os.WriteFile(pcPath, []byte(content), 0644); err != nil {
 			return fmt.Errorf("failed to write %s: %v", pair.name, err)
 		}
@@ -367,10 +363,10 @@ func updatePkgConfig(projectPath string) error {
 // installPythonEnv downloads and installs Python standalone build
 func installPythonEnv(projectPath string, version, buildDate string, freeThreaded, debug bool, verbose bool) error {
 	fmt.Printf("Installing Python %s in %s\n", version, projectPath)
-	pythonDir := env.GetPythonRoot(projectPath)
+	pythonRoot := env.GetPythonRoot(projectPath)
 
 	// Remove existing Python directory if it exists
-	if err := os.RemoveAll(pythonDir); err != nil {
+	if err := os.RemoveAll(pythonRoot); err != nil {
 		return fmt.Errorf("error removing existing Python directory: %v", err)
 	}
 
@@ -380,17 +376,30 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 		return fmt.Errorf("unsupported platform")
 	}
 
-	if err := downloadAndExtract("Python", version, url, pythonDir, "python/install", verbose); err != nil {
+	if err := downloadAndExtract("Python", version, url, pythonRoot, "python/install", verbose); err != nil {
 		return fmt.Errorf("error downloading and extracting Python: %v", err)
 	}
 
 	// After extraction, update dylib install names on macOS
-	if err := updateMacOSDylibs(pythonDir, verbose); err != nil {
-		return fmt.Errorf("error updating dylib install names: %v", err)
+	if runtime.GOOS == "darwin" {
+		if err := updateMacOSDylibs(pythonRoot, verbose); err != nil {
+			return fmt.Errorf("error updating dylib install names: %v", err)
+		}
+	}
+
+	if runtime.GOOS == "windows" {
+		pkgConfigDir := env.GetPythonPkgConfigDir(projectPath)
+		if err := genWinPyPkgConfig(pythonRoot, pkgConfigDir); err != nil {
+			return err
+		}
+	}
+
+	if err := updatePkgConfig(projectPath); err != nil {
+		return fmt.Errorf("error updating pkg-config: %v", err)
 	}
 
 	// Create Python environment
-	pyEnv := env.NewPythonEnv(pythonDir)
+	pyEnv := env.NewPythonEnv(pythonRoot)
 
 	if verbose {
 		fmt.Println("Installing Python dependencies...")
@@ -400,17 +409,12 @@ func installPythonEnv(projectPath string, version, buildDate string, freeThreade
 		return fmt.Errorf("error upgrading pip, setuptools, whell")
 	}
 
-	if err := updatePkgConfig(projectPath); err != nil {
-		return fmt.Errorf("error updating pkg-config: %v", err)
-	}
-
-	pythonHome := env.GetPythonRoot(projectPath)
 	pythonPath, err := pyEnv.GetPythonPath()
 	if err != nil {
 		return fmt.Errorf("failed to get Python path: %v", err)
 	}
 	// Write environment variables to env.txt
-	if err := env.WriteEnvFile(projectPath, pythonHome, pythonPath); err != nil {
+	if err := env.WriteEnvFile(projectPath, pythonRoot, pythonPath); err != nil {
 		return fmt.Errorf("error writing environment file: %v", err)
 	}
 
