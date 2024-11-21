@@ -10,6 +10,47 @@ on:
     branches: [ "main" ]
 
 jobs:
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+
+      - name: Install gopy
+        run: go install ./cmd/gopy
+
+      - name: Test init project
+        run: gopy init ../foo
+
+      - name: Test build project
+        env:
+          GP_INJECT_DEBUG: "1"
+        run: |
+          Set-PSDebug -Trace 2
+          cd ../foo
+          dir .deps/python/lib/pkgconfig
+          gopy build -o foo.exe .
+          gopy exec dir
+          $env:PATH=".deps/python;$env:PATH"
+          $env:PATH
+          ./foo.exe
+
+      - name: Test run project
+        env:
+          GP_INJECT_DEBUG: "1"
+        run: |
+          cd ../foo
+          gopy run -v .
+
+      - name: Test install project
+        run: |
+          cd ../foo
+          gopy install -v .
+
   test:
     continue-on-error: true
     strategy:
@@ -18,7 +59,6 @@ jobs:
         os:
           - macos-latest
           - ubuntu-24.04
-          - windows-latest
     defaults:
       run:
         shell: bash
@@ -38,14 +78,21 @@ jobs:
         run: gopy init $HOME/foo
 
       - name: Test build project
+        env:
+          GP_INJECT_DEBUG: "1"
         run: |
+          set -x
           cd $HOME/foo
-          gopy build -o foo.out .
-          ./foo.out
+          gopy exec env
+          ls $HOME/foo/.deps/python/lib/pkgconfig
+          gopy build -o foo .
+          gopy exec ls -lh
+          ./foo
 
       - name: Test run project
+        env:
+          GP_INJECT_DEBUG: "1"
         run: |
-          export GP_INJECT_DEBUG=1
           cd $HOME/foo
           gopy run -v .
 
