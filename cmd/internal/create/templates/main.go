@@ -7,4 +7,5 @@ import (
 func main() {
 	Initialize()
 	defer Finalize()
+	println("Hello, World!")
 }

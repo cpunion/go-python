@@ -37,6 +37,9 @@ func GetPythonRoot(projectPath string) string {
 
 // GetPythonBinDir returns the Python binary directory path relative to project path
 func GetPythonBinDir(projectPath string) string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(GetPythonRoot(projectPath))
+	}
 	return filepath.Join(GetPythonRoot(projectPath), "bin")
 }
 
@@ -93,6 +96,7 @@ func SetBuildEnv(projectPath string) {
 	}
 	path := os.Getenv("PATH")
 	path = GetGoBinDir(absPath) + pathSeparator() + path
+	path = GetPythonBinDir(absPath) + pathSeparator() + path
 	if runtime.GOOS == "windows" {
 		path = GetMingwRoot(absPath) + pathSeparator() + path
 		path = GetTinyPkgConfigDir(absPath) + pathSeparator() + path
@@ -101,6 +105,8 @@ func SetBuildEnv(projectPath string) {
 	os.Setenv("GOPATH", GetGoPath(absPath))
 	os.Setenv("GOROOT", GetGoRoot(absPath))
 	os.Setenv("GOCACHE", GetGoCacheDir(absPath))
+	os.Setenv("PKG_CONFIG_PATH", GetPythonPkgConfigDir(absPath))
+	os.Setenv("CGO_ENABLED", "1")
 }
 
 func pathSeparator() string {
@@ -110,13 +116,13 @@ func pathSeparator() string {
 	return ":"
 }
 
-// WriteEnvFile writes environment variables to .python/env.txt
+// WriteEnvFile writes environment variables to .deps/env.txt
 func WriteEnvFile(projectPath, pythonHome, pythonPath string) error {
 	// Prepare environment variables
 	envVars := []string{
-		fmt.Sprintf("PKG_CONFIG_PATH=%s", filepath.Join(pythonHome, "lib", "pkgconfig")),
 		fmt.Sprintf("PYTHONPATH=%s", strings.TrimSpace(pythonPath)),
 		fmt.Sprintf("PYTHONHOME=%s", pythonHome),
+		fmt.Sprintf("PATH=%s", GetPythonBinDir(projectPath)),
 	}
 
 	// Write to env.txt

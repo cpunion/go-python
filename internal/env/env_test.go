@@ -3,7 +3,6 @@ package env
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
@@ -106,7 +105,7 @@ func TestWriteEnvFile(t *testing.T) {
 		// Verify the content contains expected environment variables
 		envContent := string(content)
 		expectedVars := []string{
-			fmt.Sprintf("PKG_CONFIG_PATH=%s", filepath.Join(pythonDir, "lib", "pkgconfig")),
+			fmt.Sprintf("PATH=%s", GetPythonBinDir(projectDir)),
 			fmt.Sprintf("PYTHONPATH=/mock/path1%s/mock/path2", pathSep),
 			fmt.Sprintf("PYTHONHOME=%s", pythonDir),
 		}

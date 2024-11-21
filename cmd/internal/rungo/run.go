@@ -119,9 +119,7 @@ func RunCommand(command string, args []string) error {
 	cmd.Env = append(goEnv, os.Environ()...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	if command == "run" {
-		cmd.Stdin = os.Stdin
-	}
+	cmd.Stdin = os.Stdin
 
 	// Execute the command
 	if err := cmd.Run(); err != nil {

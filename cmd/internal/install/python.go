@@ -200,7 +200,7 @@ print(f'{version}\n{is_freethreaded}')
 	// Template for the pkg-config files
 	embedTemplate := `prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
+libdir=${exec_prefix}
 includedir=${prefix}/include
 
 Name: Python
@@ -214,7 +214,7 @@ Cflags: -I${includedir}
 
 	normalTemplate := `prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
+libdir=${exec_prefix}
 includedir=${prefix}/include
 
 Name: Python
