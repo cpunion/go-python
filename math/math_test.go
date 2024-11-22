@@ -3,7 +3,7 @@ package math
 import (
 	"testing"
 
-	gp "github.com/cpunion/go-python"
+	gp "github.com/gotray/go-python"
 )
 
 func TestSqrt(t *testing.T) {

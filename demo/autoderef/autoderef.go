@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"runtime"
 
-	. "github.com/cpunion/go-python"
-	pymath "github.com/cpunion/go-python/math"
+	. "github.com/gotray/go-python"
+	pymath "github.com/gotray/go-python/math"
 )
 
 func main() {

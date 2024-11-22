@@ -1,6 +1,6 @@
 package main
 
-import . "github.com/cpunion/go-python"
+import . "github.com/gotray/go-python"
 
 type plt struct {
 	Module

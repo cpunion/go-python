@@ -3,7 +3,7 @@ package foo
 import (
 	"fmt"
 
-	. "github.com/cpunion/go-python"
+	. "github.com/gotray/go-python"
 )
 
 type Point struct {
