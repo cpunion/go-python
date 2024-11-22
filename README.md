@@ -41,7 +41,7 @@
 
 ## Plans
 
-- [ ] Python virtual environment.
+- [x] Python virtual environment (https://github.com/gotray/got).
 - [ ] Preprocess reference counting.
 - [ ] True multi-threading.
 - [ ] Support [LLGo](https://github.com/goplus/llgo).
